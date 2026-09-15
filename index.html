@@ -1,0 +1,1811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DirectorDesk | Independent Director Governance & Compliance Platform</title>
+<style>
+:root{
+  --bg:#0A1120;
+  --bg-2:#0D1526;
+  --panel:#121D33;
+  --panel-2:#0F1828;
+  --border:#22314C;
+  --border-soft:#1A2740;
+  --blue:#2F7DFF;
+  --blue-dim:#1E5AC7;
+  --blue-soft:rgba(47,125,255,0.14);
+  --text:#EAF0FB;
+  --text-dim:#8FA0BE;
+  --text-faint:#5D6E8C;
+  --green:#2FCB7E;
+  --green-soft:rgba(47,203,126,0.14);
+  --amber:#F0A93C;
+  --amber-soft:rgba(240,169,60,0.14);
+  --red:#EF5A6F;
+  --red-soft:rgba(239,90,111,0.14);
+  --radius:10px;
+  --radius-sm:6px;
+  --sidebar-w:252px;
+  --topbar-h:60px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif;
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+html,body{height:100%;}
+body{
+  font-family:var(--font);
+  background:var(--bg);
+  color:var(--text);
+  font-size:14px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+a{color:inherit; text-decoration:none;}
+button{font-family:inherit; cursor:pointer;}
+input,select,textarea{font-family:inherit; font-size:13.5px;}
+::selection{background:var(--blue-soft);}
+
+/* focus visibility for accessibility */
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible{
+  outline:2px solid var(--blue);
+  outline-offset:2px;
+}
+
+/* ===== Layout shell ===== */
+#app{display:flex; min-height:100vh;}
+
+/* ---- Sidebar ---- */
+#sidebar{
+  width:var(--sidebar-w);
+  min-width:var(--sidebar-w);
+  background:var(--bg-2);
+  border-right:1px solid var(--border-soft);
+  height:100vh;
+  position:sticky;
+  top:0;
+  overflow-y:auto;
+  padding:16px 10px 24px;
+  transition:transform .2s ease;
+  z-index:40;
+}
+#sidebar::-webkit-scrollbar{width:6px;}
+#sidebar::-webkit-scrollbar-thumb{background:var(--border); border-radius:4px;}
+
+.brand{
+  display:flex; align-items:center; gap:10px;
+  padding:6px 10px 18px;
+  border-bottom:1px solid var(--border-soft);
+  margin-bottom:14px;
+}
+.brand-mark{
+  width:34px; height:34px; border-radius:8px;
+  background:linear-gradient(135deg, var(--blue), #1B4FB8);
+  display:flex; align-items:center; justify-content:center;
+  font-weight:700; font-size:14px; color:#fff; letter-spacing:-0.5px;
+  flex-shrink:0;
+}
+.brand-text .t1{font-weight:700; font-size:14.5px; letter-spacing:-0.2px;}
+.brand-text .t2{font-size:11px; color:var(--text-dim); margin-top:1px;}
+
+.sidebar-footer{
+  margin-top:18px; padding:14px 12px 6px;
+  border-top:1px solid var(--border-soft);
+}
+.sf-line{font-size:10.5px; color:var(--text-faint); line-height:1.5;}
+.sf-line strong{color:var(--text-dim); font-weight:600;}
+
+.nav-group{margin-bottom:6px;}
+.nav-group-label{
+  font-size:10.5px;
+  color:var(--text-faint);
+  padding:14px 12px 6px;
+  font-weight:600;
+  letter-spacing:0.3px;
+}
+.nav-item{
+  display:flex; align-items:center; gap:10px;
+  padding:8.5px 12px;
+  border-radius:var(--radius-sm);
+  color:var(--text-dim);
+  font-size:13.2px;
+  cursor:pointer;
+  margin:1px 0;
+  border:1px solid transparent;
+  position:relative;
+}
+.nav-item:hover{background:var(--panel); color:var(--text);}
+.nav-item.active{background:var(--blue-soft); color:#fff; border-color:rgba(47,125,255,0.35);}
+.nav-item.active .nav-ico{color:var(--blue);}
+.nav-ico{width:16px; text-align:center; flex-shrink:0; font-size:14px; color:var(--text-faint);}
+.nav-badge{
+  margin-left:auto; font-size:10.5px; font-weight:700;
+  background:var(--red-soft); color:var(--red);
+  padding:1px 6px; border-radius:20px; min-width:16px; text-align:center;
+}
+
+/* ---- Main column ---- */
+#main{flex:1; min-width:0; display:flex; flex-direction:column;}
+
+/* ---- Topbar ---- */
+#topbar{
+  height:var(--topbar-h);
+  border-bottom:1px solid var(--border-soft);
+  background:rgba(13,21,38,0.9);
+  backdrop-filter:blur(6px);
+  display:flex; align-items:center; gap:14px;
+  padding:0 20px;
+  position:sticky; top:0; z-index:30;
+}
+#menuToggle{
+  display:none; background:none; border:1px solid var(--border); color:var(--text);
+  width:34px; height:34px; border-radius:var(--radius-sm); font-size:15px;
+}
+.company-id{display:flex; flex-direction:column; line-height:1.25;}
+.company-id .c-name{font-weight:700; font-size:13.5px;}
+.company-id .c-meta{font-size:10.8px; color:var(--text-faint);}
+
+.topbar-search{
+  flex:1; max-width:380px;
+  display:flex; align-items:center; gap:8px;
+  background:var(--panel); border:1px solid var(--border);
+  border-radius:var(--radius-sm); padding:0 10px; height:34px;
+}
+.topbar-search input{
+  background:none; border:none; outline:none; color:var(--text); width:100%; font-size:13px;
+}
+.topbar-search input::placeholder{color:var(--text-faint);}
+.topbar-search .k{color:var(--text-faint); font-size:12px;}
+
+.topbar-right{margin-left:auto; display:flex; align-items:center; gap:8px;}
+.tb-date{font-size:12px; color:var(--text-dim); margin-right:6px; white-space:nowrap;}
+.icon-btn{
+  width:34px; height:34px; border-radius:var(--radius-sm);
+  background:var(--panel); border:1px solid var(--border); color:var(--text-dim);
+  display:flex; align-items:center; justify-content:center; font-size:14px; position:relative;
+}
+.icon-btn:hover{color:var(--text); border-color:var(--border);}
+.icon-btn .dot{
+  position:absolute; top:5px; right:5px; width:7px; height:7px; border-radius:50%;
+  background:var(--red); border:1.5px solid var(--bg-2);
+}
+.btn{
+  display:inline-flex; align-items:center; gap:6px;
+  padding:0 13px; height:34px; border-radius:var(--radius-sm);
+  font-size:13px; font-weight:600; border:1px solid transparent; white-space:nowrap;
+}
+.btn-primary{background:var(--blue); color:#fff;}
+.btn-primary:hover{background:var(--blue-dim);}
+.btn-ghost{background:var(--panel); border-color:var(--border); color:var(--text);}
+.btn-ghost:hover{border-color:var(--text-faint);}
+.btn-sm{height:28px; padding:0 10px; font-size:12.2px;}
+.btn-danger{background:var(--red-soft); color:var(--red); border-color:rgba(239,90,111,0.3);}
+.avatar{
+  width:34px; height:34px; border-radius:50%;
+  background:linear-gradient(135deg,#3B4C6E,#1E2A45);
+  display:flex; align-items:center; justify-content:center;
+  font-size:12.5px; font-weight:700; color:var(--text);
+  border:1px solid var(--border);
+}
+
+/* ---- Page content ---- */
+#pageContent{padding:22px 26px 60px; max-width:1400px; width:100%; margin:0 auto;}
+.page-head{display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:18px; flex-wrap:wrap;}
+.page-head h1{font-size:19px; font-weight:700; letter-spacing:-0.2px;}
+.page-head .sub{font-size:12.5px; color:var(--text-dim); margin-top:3px;}
+.page-head-actions{display:flex; gap:8px; align-items:center;}
+
+/* ===== Reusable pieces ===== */
+.grid{display:grid; gap:14px;}
+.g-4{grid-template-columns:repeat(4,1fr);}
+.g-3{grid-template-columns:repeat(3,1fr);}
+.g-2{grid-template-columns:repeat(2,1fr);}
+@media (max-width:1100px){.g-4{grid-template-columns:repeat(2,1fr);} .g-3{grid-template-columns:repeat(2,1fr);}}
+@media (max-width:640px){.g-4,.g-3,.g-2{grid-template-columns:1fr;}}
+
+.card{
+  background:var(--panel);
+  border:1px solid var(--border-soft);
+  border-radius:var(--radius);
+  padding:16px;
+}
+.card-title{font-size:13px; font-weight:700; margin-bottom:2px;}
+.card-sub{font-size:11.5px; color:var(--text-faint);}
+.section{margin-bottom:22px;}
+.section-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;}
+.section-head h2{font-size:14.5px; font-weight:700;}
+.section-head .link{font-size:12px; color:var(--blue); font-weight:600;}
+
+.kpi{padding:16px;}
+.kpi .label{font-size:11.5px; color:var(--text-dim); font-weight:600; margin-bottom:8px;}
+.kpi .value{font-size:24px; font-weight:700; letter-spacing:-0.5px;}
+.kpi .foot{font-size:11px; margin-top:6px; color:var(--text-faint);}
+.kpi .foot.up{color:var(--green);}
+.kpi .foot.down{color:var(--red);}
+
+.pill{
+  display:inline-flex; align-items:center; gap:5px;
+  font-size:10.8px; font-weight:700; padding:3px 8px; border-radius:20px;
+  text-transform:none;
+}
+.pill-green{background:var(--green-soft); color:var(--green);}
+.pill-amber{background:var(--amber-soft); color:var(--amber);}
+.pill-red{background:var(--red-soft); color:var(--red);}
+.pill-gray{background:var(--panel-2); color:var(--text-dim); border:1px solid var(--border);}
+.pill-blue{background:var(--blue-soft); color:var(--blue);}
+.dotstat{width:8px; height:8px; border-radius:50%; display:inline-block;}
+
+.alert-row{
+  display:flex; gap:12px; align-items:flex-start;
+  padding:13px 14px; border-radius:var(--radius-sm);
+  border:1px solid var(--border-soft); background:var(--panel-2);
+  margin-bottom:8px;
+}
+.alert-row .bar{width:4px; align-self:stretch; border-radius:3px; flex-shrink:0;}
+.alert-row.high .bar{background:var(--red);}
+.alert-row.medium .bar{background:var(--amber);}
+.alert-row.low .bar{background:var(--green);}
+.alert-body{flex:1; min-width:0;}
+.alert-body .top{display:flex; gap:8px; align-items:center; margin-bottom:3px; flex-wrap:wrap;}
+.alert-body .ttl{font-size:13px; font-weight:600;}
+.alert-body .desc{font-size:12px; color:var(--text-dim); margin-bottom:8px;}
+.alert-body .meta{font-size:11px; color:var(--text-faint);}
+.alert-actions{display:flex; gap:6px; flex-wrap:wrap;}
+
+.heat-grid{display:grid; grid-template-columns:repeat(5,1fr); gap:10px;}
+@media (max-width:1000px){.heat-grid{grid-template-columns:repeat(3,1fr);}}
+@media (max-width:640px){.heat-grid{grid-template-columns:repeat(2,1fr);}}
+.heat-cell{
+  border-radius:var(--radius-sm); padding:12px; border:1px solid var(--border-soft);
+  background:var(--panel-2); cursor:pointer;
+}
+.heat-cell:hover{border-color:var(--text-faint);}
+.heat-cell .name{font-size:12px; font-weight:600; margin-bottom:8px; min-height:30px;}
+.heat-bar-track{height:5px; border-radius:4px; background:var(--border); overflow:hidden; margin-bottom:6px;}
+.heat-bar-fill{height:100%; border-radius:4px;}
+.heat-cell .pct{font-size:11px; color:var(--text-dim);}
+
+.meeting-card{
+  border:1px solid var(--border-soft); border-radius:var(--radius-sm);
+  background:var(--panel-2); padding:13px 14px; margin-bottom:8px;
+}
+.meeting-card .top{display:flex; justify-content:space-between; gap:10px; align-items:flex-start; margin-bottom:8px;}
+.meeting-card .mtitle{font-size:13px; font-weight:700;}
+.meeting-card .mmeta{font-size:11.5px; color:var(--text-dim); margin-top:2px;}
+.meeting-card .tags{display:flex; gap:6px; flex-wrap:wrap; margin:8px 0;}
+.meeting-card .actions{display:flex; gap:6px; margin-top:8px;}
+
+.quick-card{
+  border:1px solid var(--border-soft); border-radius:var(--radius); background:var(--panel-2);
+  padding:14px; cursor:pointer; display:flex; flex-direction:column; gap:8px;
+}
+.quick-card:hover{border-color:var(--blue); background:var(--panel);}
+.quick-card .qi{font-size:18px;}
+.quick-card .qt{font-size:12.5px; font-weight:700;}
+.quick-card .qc{font-size:11px; color:var(--text-faint);}
+
+/* ===== Tables ===== */
+.table-wrap{overflow-x:auto; border:1px solid var(--border-soft); border-radius:var(--radius);}
+table{width:100%; border-collapse:collapse; font-size:12.8px; min-width:640px;}
+thead th{
+  text-align:left; font-size:11px; color:var(--text-faint); font-weight:700;
+  text-transform:none; padding:10px 12px; background:var(--panel-2); border-bottom:1px solid var(--border-soft);
+  white-space:nowrap;
+}
+tbody td{padding:10px 12px; border-bottom:1px solid var(--border-soft); vertical-align:top;}
+tbody tr:last-child td{border-bottom:none;}
+tbody tr:hover{background:rgba(255,255,255,0.02);}
+.td-actions{display:flex; gap:6px; white-space:nowrap;}
+.icon-link{
+  width:26px; height:26px; display:inline-flex; align-items:center; justify-content:center;
+  border-radius:6px; color:var(--text-dim); border:1px solid var(--border);
+}
+.icon-link:hover{color:var(--text); border-color:var(--text-faint);}
+.empty-state{
+  text-align:center; padding:44px 20px; color:var(--text-faint);
+}
+.empty-state .ei{font-size:26px; margin-bottom:8px;}
+.empty-state .et{font-size:13px; color:var(--text-dim); font-weight:600; margin-bottom:4px;}
+.empty-state .ed{font-size:12px;}
+
+/* toolbar (filters) */
+.toolbar{display:flex; gap:8px; align-items:center; margin-bottom:12px; flex-wrap:wrap;}
+.toolbar input[type=text], .toolbar select{
+  background:var(--panel); border:1px solid var(--border); color:var(--text);
+  border-radius:var(--radius-sm); padding:7px 10px; height:34px;
+}
+.toolbar input[type=text]{min-width:200px; flex:1; max-width:280px;}
+
+/* forms */
+.form-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px 14px;}
+@media (max-width:640px){.form-grid{grid-template-columns:1fr;}}
+.form-field{display:flex; flex-direction:column; gap:5px;}
+.form-field.full{grid-column:1/-1;}
+.form-field label{font-size:11.5px; font-weight:600; color:var(--text-dim);}
+.form-field input, .form-field select, .form-field textarea{
+  background:var(--panel-2); border:1px solid var(--border); color:var(--text);
+  border-radius:var(--radius-sm); padding:8px 10px; width:100%;
+}
+.form-field textarea{resize:vertical; min-height:64px;}
+.form-field input:focus, .form-field select:focus, .form-field textarea:focus{border-color:var(--blue);}
+.field-hint{font-size:10.8px; color:var(--text-faint);}
+
+/* modal */
+.modal-overlay{
+  position:fixed; inset:0; background:rgba(6,10,20,0.65); z-index:100;
+  display:flex; align-items:flex-start; justify-content:center; padding:40px 16px; overflow-y:auto;
+}
+.modal{
+  background:var(--bg-2); border:1px solid var(--border); border-radius:12px;
+  width:100%; max-width:620px; padding:20px 22px 22px; box-shadow:0 20px 60px rgba(0,0,0,0.5);
+}
+.modal-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;}
+.modal-head h3{font-size:15.5px; font-weight:700;}
+.modal-close{
+  width:28px; height:28px; border-radius:8px; background:var(--panel); border:1px solid var(--border);
+  color:var(--text-dim); display:flex; align-items:center; justify-content:center; font-size:14px;
+}
+.modal-foot{display:flex; justify-content:space-between; gap:10px; margin-top:18px; padding-top:14px; border-top:1px solid var(--border-soft);}
+
+.toast-wrap{position:fixed; bottom:20px; right:20px; z-index:200; display:flex; flex-direction:column; gap:8px;}
+.toast{
+  background:var(--panel); border:1px solid var(--border); border-left:3px solid var(--green);
+  padding:11px 16px; border-radius:8px; font-size:12.8px; min-width:220px;
+  box-shadow:0 8px 24px rgba(0,0,0,0.4); animation:toastIn .18s ease;
+}
+.toast.err{border-left-color:var(--red);}
+@keyframes toastIn{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+
+.disclaimer-strip{
+  background:var(--amber-soft); border:1px solid rgba(240,169,60,0.3); color:var(--amber);
+  border-radius:var(--radius-sm); padding:10px 14px; font-size:11.8px; margin-bottom:18px;
+  display:flex; gap:8px; align-items:flex-start;
+}
+
+/* AI assistant drawer */
+#aiDrawer{
+  position:fixed; top:0; right:0; height:100vh; width:400px; max-width:92vw;
+  background:var(--bg-2); border-left:1px solid var(--border); z-index:90;
+  display:flex; flex-direction:column; transform:translateX(100%); transition:transform .22s ease;
+}
+#aiDrawer.open{transform:translateX(0);}
+.ai-head{padding:16px 18px; border-bottom:1px solid var(--border-soft); display:flex; justify-content:space-between; align-items:center;}
+.ai-head .ttl{font-size:14px; font-weight:700; display:flex; align-items:center; gap:8px;}
+.ai-mode{font-size:10.5px; color:var(--amber); background:var(--amber-soft); padding:2px 7px; border-radius:20px; font-weight:700;}
+.ai-msgs{flex:1; overflow-y:auto; padding:16px 18px; display:flex; flex-direction:column; gap:10px;}
+.ai-msg{max-width:88%; padding:9px 12px; border-radius:10px; font-size:12.8px; line-height:1.5;}
+.ai-msg.user{align-self:flex-end; background:var(--blue); color:#fff; border-bottom-right-radius:3px;}
+.ai-msg.bot{align-self:flex-start; background:var(--panel); border:1px solid var(--border-soft); border-bottom-left-radius:3px; white-space:pre-line;}
+.ai-suggest{display:flex; flex-wrap:wrap; gap:6px; padding:0 18px 12px;}
+.ai-chip{font-size:11px; background:var(--panel); border:1px solid var(--border); color:var(--text-dim); padding:5px 10px; border-radius:20px;}
+.ai-input-row{display:flex; gap:8px; padding:14px 18px; border-top:1px solid var(--border-soft);}
+.ai-input-row input{flex:1; background:var(--panel-2); border:1px solid var(--border); border-radius:var(--radius-sm); padding:9px 11px; color:var(--text);}
+
+#aiOverlay{position:fixed; inset:0; background:rgba(6,10,20,0.4); z-index:85; opacity:0; pointer-events:none; transition:opacity .2s;}
+#aiOverlay.open{opacity:1; pointer-events:auto;}
+
+/* mobile */
+@media (max-width:900px){
+  #sidebar{position:fixed; left:0; top:0; transform:translateX(-100%); box-shadow:0 0 40px rgba(0,0,0,0.5);}
+  #sidebar.open{transform:translateX(0);}
+  #menuToggle{display:flex; align-items:center; justify-content:center;}
+  .company-id{display:none;}
+  #pageContent{padding:16px 14px 50px;}
+  .topbar-search{max-width:none; min-width:0; flex:1;}
+  .tb-date{display:none;}
+}
+@media (max-width:460px){
+  #topbar{padding:0 10px; gap:8px;}
+  .topbar-search{min-width:60px;}
+  .btn-primary .btn-label{display:none;}
+}
+#sidebarScrim{display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:39;}
+#sidebarScrim.open{display:block;}
+
+.progress-track{height:6px; background:var(--border); border-radius:4px; overflow:hidden;}
+.progress-fill{height:100%; border-radius:4px;}
+.small-muted{font-size:11px; color:var(--text-faint);}
+.flex-between{display:flex; justify-content:space-between; align-items:center;}
+.mt8{margin-top:8px;} .mt12{margin-top:12px;} .mt16{margin-top:16px;}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div id="sidebarScrim" onclick="closeSidebar()"></div>
+  <aside id="sidebar"></aside>
+
+  <div id="main">
+    <header id="topbar"></header>
+    <main id="pageContent"></main>
+  </div>
+</div>
+
+<div id="aiOverlay" onclick="toggleAI(false)"></div>
+<div id="aiDrawer"></div>
+<div id="modalRoot"></div>
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+/* =========================================================================
+   DirectorDesk — Independent Director Governance & Compliance Platform
+   Single-file prototype. Data persists to localStorage. No backend.
+   ========================================================================= */
+
+const STORAGE_KEY = 'idgos_data_v1';
+const TODAY = new Date(); TODAY.setHours(0,0,0,0);
+
+function uid(prefix){ return prefix + '_' + Math.random().toString(36).slice(2,9); }
+function fmtDate(d){ if(!d) return '—'; const dt = new Date(d+'T00:00:00'); if(isNaN(dt)) return d; return dt.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}); }
+function daysUntil(d){ if(!d) return null; const dt = new Date(d+'T00:00:00'); return Math.round((dt-TODAY)/86400000); }
+function money(n){ n = Number(n)||0; return '₹' + n.toLocaleString('en-IN'); }
+function escapeHtml(s){ if(s===undefined||s===null) return ''; return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ---------------- Default / sample data ---------------- */
+function sampleData(){
+  return {
+    company: {
+      name: 'Meridian Industries Ltd',
+      cin: 'L27100MH2005PLC152834',
+      listing: 'BSE & NSE Listed',
+    },
+    director: {
+      name: 'Anil Sharma',
+      designation: 'Independent Director',
+    },
+    meetings: [
+      { id: uid('mt'), type:'Board', committeeName:'', number:'Board Meeting No. 47', date: addDays(4), time:'11:00', venue:'Corporate Office, Mumbai (Hybrid)', agendaStatus:'Circulated', noticeStatus:'Sent', attendance:'Confirmed', votingStatus:'Pending', pendingActions:'Review Q2 financials before meeting.' },
+      { id: uid('mt'), type:'Committee', committeeName:'Audit Committee', number:'Audit Committee Meeting No. 12', date: addDays(2), time:'15:30', venue:'Video Conference (MS Teams)', agendaStatus:'Draft', noticeStatus:'Pending', attendance:'Tentative', votingStatus:'Pending', pendingActions:'Internal audit report awaited from auditor.' },
+      { id: uid('mt'), type:'Committee', committeeName:'Nomination & Remuneration Committee', number:'NRC Meeting No. 6', date: addDays(18), time:'10:00', venue:'Corporate Office, Mumbai', agendaStatus:'Not Started', noticeStatus:'Not Sent', attendance:'Confirmed', votingStatus:'—', pendingActions:'' },
+      { id: uid('mt'), type:'Committee', committeeName:'Stakeholders Relationship Committee', number:'SRC Meeting No. 9', date: addDays(25), time:'14:00', venue:'Video Conference (Zoom)', agendaStatus:'Not Started', noticeStatus:'Not Sent', attendance:'Tentative', votingStatus:'—', pendingActions:'Compile investor grievance summary for Q2.' },
+      { id: uid('mt'), type:'Committee', committeeName:'Risk Management Committee', number:'RMC Meeting No. 4', date: addDays(31), time:'11:30', venue:'Corporate Office, Mumbai', agendaStatus:'Not Started', noticeStatus:'Not Sent', attendance:'Confirmed', votingStatus:'—', pendingActions:'' },
+      { id: uid('mt'), type:'Board', committeeName:'', number:'Board Meeting No. 46', date: addDays(-32), time:'11:00', venue:'Corporate Office, Mumbai', agendaStatus:'Circulated', noticeStatus:'Sent', attendance:'Attended', votingStatus:'Completed', pendingActions:'' },
+      { id: uid('mt'), type:'Committee', committeeName:'Audit Committee', number:'Audit Committee Meeting No. 11', date: addDays(-40), time:'15:00', venue:'Video Conference (MS Teams)', agendaStatus:'Circulated', noticeStatus:'Sent', attendance:'Attended', votingStatus:'Completed', pendingActions:'' },
+      { id: uid('mt'), type:'Board', committeeName:'', number:'Board Meeting No. 45', date: addDays(-95), time:'11:00', venue:'Corporate Office, Mumbai', agendaStatus:'Circulated', noticeStatus:'Sent', attendance:'Attended', votingStatus:'Completed', pendingActions:'' },
+      { id: uid('mt'), type:'Committee', committeeName:'Nomination & Remuneration Committee', number:'NRC Meeting No. 5', date: addDays(-101), time:'10:30', venue:'Corporate Office, Mumbai', agendaStatus:'Circulated', noticeStatus:'Sent', attendance:'Attended', votingStatus:'Completed', pendingActions:'' },
+      { id: uid('mt'), type:'Board', committeeName:'', number:'Extraordinary General Meeting Prep Session', date: addDays(45), time:'10:00', venue:'Corporate Office, Mumbai (Hybrid)', agendaStatus:'Not Started', noticeStatus:'Not Sent', attendance:'Confirmed', votingStatus:'—', pendingActions:'Awaiting draft resolution from legal team.' },
+    ],
+    agendaItems: [
+      { id: uid('ag'), meetingRef:'Board Meeting No. 47', number:'Item 4', subject:'Approval of Q2 FY26 Financial Results', background:'Unaudited standalone and consolidated results for the quarter ended Sep 30, 2026, reviewed by the Audit Committee.', financialImpl:'Revenue growth of 8.2% YoY; EBITDA margin compression of 40 bps.', riskAssessment:'Low', recommendation:'Approve for board adoption and stock exchange filing.', observations:'', status:'Pending Review' },
+      { id: uid('ag'), meetingRef:'Board Meeting No. 47', number:'Item 5', subject:'Interim Dividend Declaration', background:'Proposal for an interim dividend of ₹4 per equity share for FY26.', financialImpl:'Cash outflow of approximately ₹18 crore.', riskAssessment:'Low', recommendation:'Approve subject to liquidity confirmation from CFO.', observations:'', status:'Pending Review' },
+      { id: uid('ag'), meetingRef:'Board Meeting No. 47', number:'Item 6', subject:'Related-Party Transaction — IT Services Renewal', background:'Renewal of IT support services agreement with a wholly owned subsidiary.', financialImpl:'Annual value approx. ₹3.2 crore, arm\'s length basis.', riskAssessment:'Medium', recommendation:'Recommend Audit Committee ratification prior to Board approval.', observations:'', status:'Pending Review' },
+      { id: uid('ag'), meetingRef:'Board Meeting No. 47', number:'Item 7', subject:'Appointment of Chief Risk Officer', background:'Proposal to appoint a dedicated CRO reporting to the Risk Management Committee.', financialImpl:'Addition to senior management cost base.', riskAssessment:'Low', recommendation:'Approve appointment effective next quarter.', observations:'Supportive — strengthens ERM oversight ahead of listing on additional exchange.', status:'Reviewed' },
+      { id: uid('ag'), meetingRef:'Audit Committee Meeting No. 12', number:'Item 2', subject:'Internal Audit Report — Procurement Function', background:'Internal audit covering procurement controls for H1 FY26.', financialImpl:'No material financial impact identified.', riskAssessment:'Medium', recommendation:'Note observations; track closure of 3 medium-risk findings.', observations:'', status:'Clarification Required' },
+      { id: uid('ag'), meetingRef:'Audit Committee Meeting No. 12', number:'Item 3', subject:'Statutory Auditor Fee Revision', background:'Proposal to revise statutory audit fees for FY27 in line with scope expansion.', financialImpl:'Increase of approx. 12% over FY26 fees.', riskAssessment:'Low', recommendation:'Recommend to Board for approval at AGM.', observations:'', status:'Pending Review' },
+      { id: uid('ag'), meetingRef:'NRC Meeting No. 6', number:'Item 1', subject:'Annual Board Evaluation Process', background:'Proposed framework for annual performance evaluation of the Board, committees and individual directors.', financialImpl:'None.', riskAssessment:'Low', recommendation:'Approve evaluation questionnaire and timeline.', observations:'', status:'Pending Review' },
+      { id: uid('ag'), meetingRef:'Board Meeting No. 46', number:'Item 3', subject:'Approval of Q1 FY26 Financial Results', background:'Unaudited results for the quarter ended Jun 30, 2026.', financialImpl:'Revenue growth of 6.5% YoY.', riskAssessment:'Low', recommendation:'Approved for filing.', observations:'Concurred with management outlook on input costs.', status:'Reviewed' },
+      { id: uid('ag'), meetingRef:'Audit Committee Meeting No. 11', number:'Item 4', subject:'IT General Controls — Access Review Findings', background:'Review of quarterly user access recertification process.', financialImpl:'None directly; potential control risk.', riskAssessment:'High', recommendation:'Recommend immediate remediation plan from CISO.', observations:'Escalated to full Board for visibility.', status:'Reviewed' },
+    ],
+    minutes: [
+      { id: uid('mn'), meetingRef:'Board Meeting No. 46', resolutionText:'Approval of Q1 FY26 unaudited financial results', votesFor:7, votesAgainst:0, abstain:0, dissent:'', directorObservations:'Concurred with management view on working capital cycle.', followUp:'None' },
+      { id: uid('mn'), meetingRef:'Board Meeting No. 46', resolutionText:'Re-appointment of statutory auditors for FY27', votesFor:6, votesAgainst:0, abstain:1, dissent:'', directorObservations:'', followUp:'Circulate engagement letter to committee.' },
+      { id: uid('mn'), meetingRef:'Board Meeting No. 46', resolutionText:'Approval of related-party lease with Meridian Family Trust', votesFor:5, votesAgainst:1, abstain:1, dissent:'One independent director recorded reservations on rental valuation methodology.', directorObservations:'Requested an independent valuation report be placed on record.', followUp:'Valuation report to be circulated within 30 days.' },
+      { id: uid('mn'), meetingRef:'Audit Committee Meeting No. 11', resolutionText:'Adoption of internal audit plan for FY27', votesFor:4, votesAgainst:0, abstain:0, dissent:'', directorObservations:'Suggested increased sampling for IT controls.', followUp:'Revised plan to be shared before next meeting.' },
+      { id: uid('mn'), meetingRef:'Board Meeting No. 45', resolutionText:'Approval of FY25 annual accounts and Board report', votesFor:7, votesAgainst:0, abstain:0, dissent:'', directorObservations:'', followUp:'None' },
+      { id: uid('mn'), meetingRef:'NRC Meeting No. 5', resolutionText:'Approval of revised remuneration policy for senior management', votesFor:3, votesAgainst:0, abstain:0, dissent:'', directorObservations:'Recommended benchmarking against two additional peer companies next cycle.', followUp:'Benchmarking study to be commissioned.' },
+    ],
+    actionItems: [
+      { id: uid('ac'), title:'Review Q2 FY26 agenda papers', description:'Review financial statements and notes before Board Meeting No. 47.', responsible:'Anil Sharma', meetingRef:'Board Meeting No. 47', dueDate: addDays(3), priority:'High', status:'In Progress', remarks:'' },
+      { id: uid('ac'), title:'File annual MBP-1 declaration', description:'Annual disclosure of interest under Section 184(1).', responsible:'Anil Sharma', meetingRef:'', dueDate: addDays(-2), priority:'High', status:'Overdue', remarks:'Awaiting updated shareholding details.' },
+      { id: uid('ac'), title:'Follow up on internal audit closure', description:'Confirm closure status of procurement audit findings with CFO.', responsible:'Anil Sharma', meetingRef:'Audit Committee Meeting No. 12', dueDate: addDays(9), priority:'Medium', status:'Pending', remarks:'' },
+      { id: uid('ac'), title:'Sign minutes of Board Meeting No. 46', description:'Countersign approved minutes circulated by Company Secretary.', responsible:'Anil Sharma', meetingRef:'Board Meeting No. 46', dueDate: addDays(-10), priority:'Medium', status:'Completed', remarks:'Signed and returned on time.' },
+      { id: uid('ac'), title:'Review draft interim dividend proposal', description:'Assess liquidity position and dividend distribution tax impact before Board approval.', responsible:'Anil Sharma', meetingRef:'Board Meeting No. 47', dueDate: addDays(5), priority:'Medium', status:'Pending', remarks:'' },
+      { id: uid('ac'), title:'Escalate IT General Controls remediation', description:'Follow up with CISO on user access review remediation timeline.', responsible:'Anil Sharma', meetingRef:'Audit Committee Meeting No. 12', dueDate: addDays(-1), priority:'High', status:'Overdue', remarks:'Second reminder sent; no response yet.' },
+      { id: uid('ac'), title:'Provide inputs on Board evaluation questionnaire', description:'Review and comment on the draft annual Board evaluation framework.', responsible:'Anil Sharma', meetingRef:'NRC Meeting No. 6', dueDate: addDays(15), priority:'Low', status:'Pending', remarks:'' },
+      { id: uid('ac'), title:'Review CRO appointment terms', description:'Independent review of proposed Chief Risk Officer role, reporting line and remuneration.', responsible:'Anil Sharma', meetingRef:'Board Meeting No. 47', dueDate: addDays(2), priority:'Medium', status:'In Progress', remarks:'' },
+      { id: uid('ac'), title:'Confirm attendance for RMC Meeting No. 4', description:'Confirm availability and pre-read the risk dashboard.', responsible:'Anil Sharma', meetingRef:'RMC Meeting No. 4', dueDate: addDays(20), priority:'Low', status:'Pending', remarks:'' },
+      { id: uid('ac'), title:'Complete annual independence self-declaration', description:'Confirm continuing independence status for the Board and NRC records.', responsible:'Anil Sharma', meetingRef:'', dueDate: addDays(-15), priority:'High', status:'Completed', remarks:'Filed with Company Secretary on time.' },
+      { id: uid('ac'), title:'Review investor grievance summary', description:'Read SRC pre-read on pending investor complaints before the meeting.', responsible:'Anil Sharma', meetingRef:'SRC Meeting No. 9', dueDate: addDays(23), priority:'Low', status:'Pending', remarks:'' },
+      { id: uid('ac'), title:'Sign off FY25 annual report director confirmation', description:'Provide written confirmation for inclusion in the FY25 Annual Report.', responsible:'Anil Sharma', meetingRef:'Board Meeting No. 45', dueDate: addDays(-70), priority:'Medium', status:'Completed', remarks:'' },
+    ],
+    complianceEvents: [
+      { id: uid('ce'), title:'SEBI Trading Window Closure Begins', area:'SEBI Insider Trading Regulations', dueDate: addDays(6), reminderDays:2, completed:false, notes:'Window closes ahead of Q2 results announcement.' },
+      { id: uid('ce'), title:'Trading Window Reopens', area:'SEBI Insider Trading Regulations', dueDate: addDays(10), reminderDays:1, completed:false, notes:'48 hours after results are made public.' },
+      { id: uid('ce'), title:'Quarterly Compliance Report to Stock Exchanges', area:'SEBI LODR Regulations', dueDate: addDays(15), reminderDays:5, completed:false, notes:'Regulation 27(2) filing.' },
+      { id: uid('ce'), title:'DIR-8 Annual Declaration Due', area:'Companies Act, 2013', dueDate: addDays(-2), reminderDays:7, completed:false, notes:'Non-disqualification declaration.' },
+      { id: uid('ce'), title:'Board Meeting No. 47 — Financial Results Approval', area:'SEBI LODR Regulations', dueDate: addDays(4), reminderDays:3, completed:false, notes:'Regulation 33 timeline — within 45 days of quarter end.' },
+      { id: uid('ce'), title:'Corporate Governance Report Filing', area:'SEBI LODR Regulations', dueDate: addDays(22), reminderDays:5, completed:false, notes:'Regulation 27(2) quarterly governance report.' },
+      { id: uid('ce'), title:'CSR Committee Annual Report Compilation', area:'Companies Act, 2013', dueDate: addDays(38), reminderDays:10, completed:false, notes:'Input required for Annual Report CSR disclosure.' },
+      { id: uid('ce'), title:'Annual Secretarial Audit Report Review', area:'Companies Act, 2013', dueDate: addDays(50), reminderDays:7, completed:false, notes:'Review draft secretarial audit report (Form MR-3) before filing.' },
+      { id: uid('ce'), title:'Shareholding Pattern Filing (Reg. 31)', area:'SEBI LODR Regulations', dueDate: addDays(-18), reminderDays:5, completed:true, notes:'Filed on time by Company Secretary.' },
+      { id: uid('ce'), title:'Risk Management Policy Annual Review', area:'Enterprise Risk Management', dueDate: addDays(29), reminderDays:7, completed:false, notes:'Due for RMC Meeting No. 4 approval.' },
+    ],
+    disclosures: [
+      { id: uid('ds'), type:'MBP-1', submissionDate: addDays(-370), validity: addDays(-5), status:'Overdue', notes:'Annual renewal pending for FY27.' },
+      { id: uid('ds'), type:'DIR-8', submissionDate: addDays(-360), validity: addDays(5), status:'Expiring Soon', notes:'Declaration of non-disqualification.' },
+      { id: uid('ds'), type:'Disclosure of Interest', submissionDate: addDays(-200), validity: addDays(165), status:'Filed', notes:'No change in interests reported since last filing.' },
+      { id: uid('ds'), type:'Related-Party Interest', submissionDate: addDays(-40), validity: addDays(325), status:'Filed', notes:'Updated post IT services agreement disclosure.' },
+      { id: uid('ds'), type:'Annual Declaration', submissionDate: addDays(-80), validity: addDays(285), status:'Filed', notes:'Annual declaration of independence under Section 149(7).' },
+      { id: uid('ds'), type:'Other', submissionDate:'', validity: addDays(12), status:'Pending', notes:'Form DIR-3 KYC annual web-based confirmation due.' },
+      { id: uid('ds'), type:'Disclosure of Interest', submissionDate:'', validity:'', status:'Pending', notes:'New consultancy engagement with an unrelated listed entity — disclosure to be filed.' },
+      { id: uid('ds'), type:'MBP-1', submissionDate: addDays(-1), validity: addDays(364), status:'Filed', notes:'Refiled with updated concern/company list for FY27.' },
+    ],
+    auditObservations: [
+      { id: uid('ao'), area:'Procurement Controls', riskRating:'Medium', responsible:'Head — Procurement', targetDate: addDays(20), status:'Open', notes:'Three-way match exceptions noted in 4% of sampled POs.' },
+      { id: uid('ao'), area:'IT General Controls', riskRating:'High', responsible:'CISO', targetDate: addDays(12), status:'In Progress', notes:'User access review overdue for two quarters.' },
+      { id: uid('ao'), area:'Fixed Asset Verification', riskRating:'Low', responsible:'Finance Controller', targetDate: addDays(-8), status:'Closed', notes:'Physical verification completed; no material variance.' },
+      { id: uid('ao'), area:'Revenue Cut-off Testing', riskRating:'Medium', responsible:'Statutory Auditor', targetDate: addDays(-3), status:'Open', notes:'Minor cut-off exceptions near quarter-end noted; management response awaited.' },
+      { id: uid('ao'), area:'Related-Party Transaction Documentation', riskRating:'High', responsible:'Company Secretary', targetDate: addDays(7), status:'In Progress', notes:'Board note templates being standardised for arm\'s-length justification.' },
+      { id: uid('ao'), area:'Inventory Valuation — Slow Moving Stock', riskRating:'Medium', responsible:'Plant Controller', targetDate: addDays(-25), status:'Closed', notes:'Provisioning policy revised and applied in Q1 FY26.' },
+      { id: uid('ao'), area:'Whistleblower Mechanism Effectiveness', riskRating:'Low', responsible:'Chief Vigilance Officer', targetDate: addDays(35), status:'Open', notes:'Annual effectiveness review scheduled with Audit Committee.' },
+    ],
+    rpts: [
+      { id: uid('rp'), party:'Meridian Tech Solutions Pvt Ltd (Subsidiary)', relationship:'Wholly Owned Subsidiary', value:32000000, nature:'IT support services renewal', approvalRequired:'Audit Committee', status:'Pending Approval', notes:'Arm\'s length pricing confirmed by independent valuer.' },
+      { id: uid('rp'), party:'Meridian Family Trust', relationship:'Entity controlled by promoter group', value:8500000, nature:'Lease of warehousing facility', approvalRequired:'Shareholders', status:'Approved', notes:'Approved at last AGM via special resolution.' },
+      { id: uid('rp'), party:'R. Verma (KMP)', relationship:'Key Managerial Personnel', value:1200000, nature:'Consultancy arrangement', approvalRequired:'Board', status:'Proposed', notes:'Under review by Audit Committee prior to Board placement.' },
+      { id: uid('rp'), party:'Meridian Logistics Pvt Ltd (Associate)', relationship:'Associate Company (26% stake)', value:15600000, nature:'Freight and distribution services agreement', approvalRequired:'Audit Committee', status:'Approved', notes:'Renewed on same commercial terms as prior year.' },
+      { id: uid('rp'), party:'S. Iyer (Relative of Director)', relationship:'Relative of a Non-Executive Director', value:450000, nature:'Purchase of promotional merchandise', approvalRequired:'Audit Committee', status:'Rejected', notes:'Rejected — alternate vendor found at lower cost with no relationship.' },
+      { id: uid('rp'), party:'Meridian Foundation (CSR arm)', relationship:'Entity controlled by the Company', value:22000000, nature:'CSR project funding — skill development program', approvalRequired:'Board', status:'Approved', notes:'Aligned with Schedule VII CSR activities.' },
+    ],
+    erm: [
+      { id: uid('rk'), riskArea:'Raw Material Price Volatility', riskRating:'High', mitigation:'Hedging policy under review; long-term supplier contracts being negotiated.', owner:'CFO', status:'Monitoring' },
+      { id: uid('rk'), riskArea:'Cybersecurity & Data Privacy', riskRating:'High', mitigation:'SOC 2 readiness assessment in progress; phishing simulation completed.', owner:'CISO', status:'Open' },
+      { id: uid('rk'), riskArea:'Key Customer Concentration', riskRating:'Medium', mitigation:'Diversification strategy targeting 3 new geographies in FY27.', owner:'Chief Revenue Officer', status:'Monitoring' },
+      { id: uid('rk'), riskArea:'Regulatory Change — Extended Producer Responsibility', riskRating:'Medium', mitigation:'Cross-functional task force established to assess compliance cost.', owner:'Chief Compliance Officer', status:'Open' },
+      { id: uid('rk'), riskArea:'Talent Attrition — Engineering Function', riskRating:'Medium', mitigation:'Revised retention bonus structure approved by NRC.', owner:'Chief Human Resources Officer', status:'Monitoring' },
+      { id: uid('rk'), riskArea:'Foreign Exchange Exposure', riskRating:'Low', mitigation:'Natural hedge via import-export mix; forward contracts for residual exposure.', owner:'Treasury Head', status:'Closed' },
+    ],
+    ifc: [
+      { id: uid('ic'), controlArea:'Revenue Recognition — Multi-element Contracts', testStatus:'Effective', lastTested: addDays(-40), remarks:'No exceptions noted in Q1 testing.' },
+      { id: uid('ic'), controlArea:'Journal Entry Review & Approval', testStatus:'Deficient', lastTested: addDays(-25), remarks:'Segregation of duties gap identified; remediation plan submitted.' },
+      { id: uid('ic'), controlArea:'Vendor Master Data Governance', testStatus:'Not Tested', lastTested:'', remarks:'Scheduled for Q3 testing cycle.' },
+      { id: uid('ic'), controlArea:'Capital Expenditure Approval Matrix', testStatus:'Effective', lastTested: addDays(-55), remarks:'Delegation of authority limits verified against ERP configuration.' },
+      { id: uid('ic'), controlArea:'Bank Reconciliation Review', testStatus:'Effective', lastTested: addDays(-15), remarks:'Monthly reconciliations reviewed and signed off on time.' },
+      { id: uid('ic'), controlArea:'Payroll Master Data Changes', testStatus:'Deficient', lastTested: addDays(-60), remarks:'Approval workflow bypass identified in two instances; access restricted pending fix.' },
+    ],
+    complianceAreas: [
+      { id:'companiesAct', name:'Companies Act, 2013', percent:88, status:'Attention', pending:'DIR-8 declaration overdue', deadline: addDays(-2) },
+      { id:'sebiLodr', name:'SEBI LODR Regulations', percent:92, status:'Compliant', pending:'Quarterly report due in 15 days', deadline: addDays(15) },
+      { id:'sebiInsider', name:'SEBI Insider Trading Regulations', percent:95, status:'Compliant', pending:'Trading window closes in 6 days', deadline: addDays(6) },
+      { id:'boardGov', name:'Board Governance', percent:90, status:'Compliant', pending:'Board evaluation cycle due next quarter', deadline: addDays(60) },
+      { id:'committeeGov', name:'Committee Governance', percent:78, status:'Attention', pending:'NRC agenda not yet circulated', deadline: addDays(18) },
+      { id:'auditOversight', name:'Financial & Audit Oversight', percent:82, status:'Attention', pending:'3 audit observations open', deadline: addDays(12) },
+      { id:'disclosures', name:'Disclosures and Filings', percent:70, status:'Overdue', pending:'MBP-1 overdue by 5 days', deadline: addDays(-5) },
+      { id:'rptArea', name:'Related-Party Transactions', percent:85, status:'Attention', pending:'1 RPT pending Audit Committee approval', deadline: addDays(7) },
+      { id:'erm', name:'Enterprise Risk Management', percent:80, status:'Attention', pending:'Cyber risk mitigation plan in progress', deadline: addDays(30) },
+      { id:'ifcArea', name:'Internal Financial Controls', percent:75, status:'Attention', pending:'2 deficient controls under remediation', deadline: addDays(25) },
+    ],
+  };
+}
+function addDays(n){ const d = new Date(); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); }
+
+/* ---------------- Storage ---------------- */
+let DATA = loadData();
+function loadData(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw) return JSON.parse(raw);
+  }catch(e){ console.warn('Failed to load saved data, using sample data.', e); }
+  const d = sampleData();
+  persist(d);
+  return d;
+}
+function persist(d){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(d||DATA)); }
+  catch(e){ console.error('Storage save failed', e); toast('Could not save — browser storage may be full.', true); }
+}
+function saveAll(){ persist(DATA); }
+
+function toast(msg, isErr){
+  const wrap = document.getElementById('toastWrap');
+  const el = document.createElement('div');
+  el.className = 'toast' + (isErr?' err':'');
+  el.textContent = msg;
+  wrap.appendChild(el);
+  setTimeout(()=>{ el.remove(); }, 3200);
+}
+
+/* =========================================================================
+   Navigation
+   ========================================================================= */
+const NAV = [
+  { group:'Core Overview', items:[
+    { id:'dashboard', label:'Executive Dashboard', icon:'&#9673;' },
+    { id:'scorecard', label:'Governance Scorecard', icon:'&#9737;' },
+  ]},
+  { group:'Actions & Schedules', items:[
+    { id:'actions', label:'My Action Items', icon:'&#9745;' },
+    { id:'calendar', label:'Compliance Calendar', icon:'&#128197;' },
+    { id:'followup', label:'Follow-up Tracker', icon:'&#8635;' },
+  ]},
+  { group:'Board & Committees', items:[
+    { id:'boardMeetings', label:'Board Meetings', icon:'&#127970;' },
+    { id:'committeeMeetings', label:'Committee Meetings', icon:'&#128101;' },
+    { id:'agenda', label:'Agenda Review', icon:'&#128196;' },
+    { id:'minutes', label:'Minutes & Voting Records', icon:'&#128221;' },
+  ]},
+  { group:'Fiduciary & Statutory', items:[
+    { id:'disclosures', label:'Disclosures & Declarations', icon:'&#9888;' },
+    { id:'audit', label:'Financial & Audit Oversight', icon:'&#128176;' },
+  ]},
+  { group:'Additional Modules', items:[
+    { id:'rpt', label:'Related-Party Transactions', icon:'&#128260;' },
+    { id:'erm', label:'Enterprise Risk Management', icon:'&#9889;' },
+    { id:'ifc', label:'Internal Financial Controls', icon:'&#128272;' },
+    { id:'reports', label:'Governance Reports', icon:'&#128202;' },
+    { id:'settings', label:'Settings', icon:'&#9881;' },
+  ]},
+];
+const PAGE_TITLES = {};
+NAV.forEach(g=>g.items.forEach(i=>PAGE_TITLES[i.id]=i.label));
+
+let CURRENT_PAGE = 'dashboard';
+
+/* =========================================================================
+   Shell: sidebar + topbar
+   ========================================================================= */
+function renderSidebar(){
+  const el = document.getElementById('sidebar');
+  let html = `
+    <div class="brand">
+      <div class="brand-mark">DD</div>
+      <div class="brand-text">
+        <div class="t1">DirectorDesk</div>
+        <div class="t2">Governance & Compliance</div>
+      </div>
+    </div>`;
+  NAV.forEach(g=>{
+    html += `<div class="nav-group"><div class="nav-group-label">${g.group}</div>`;
+    g.items.forEach(item=>{
+      const badge = navBadge(item.id);
+      html += `<div class="nav-item ${CURRENT_PAGE===item.id?'active':''}" onclick="goTo('${item.id}')" tabindex="0" role="button">
+        <span class="nav-ico">${item.icon}</span>
+        <span>${item.label}</span>
+        ${badge? `<span class="nav-badge">${badge}</span>`:''}
+      </div>`;
+    });
+    html += `</div>`;
+  });
+  html += `<div class="sidebar-footer">
+    <div class="sf-line">Developed by <strong>Anil Sharma</strong></div>
+    <div class="sf-line">Former General Manager, Central Bank of India</div>
+  </div>`;
+  el.innerHTML = html;
+}
+function navBadge(id){
+  if(id==='actions') return countOverdueActions() || '';
+  if(id==='disclosures') return DATA.disclosures.filter(d=>d.status==='Overdue').length || '';
+  if(id==='audit') return DATA.auditObservations.filter(a=>a.status!=='Closed' && a.riskRating==='High').length || '';
+  return '';
+}
+function countOverdueActions(){
+  return DATA.actionItems.filter(a=> a.status!=='Completed' && a.dueDate && daysUntil(a.dueDate)<0).length;
+}
+
+function renderTopbar(){
+  const el = document.getElementById('topbar');
+  const todayStr = TODAY.toLocaleDateString('en-IN',{weekday:'short', day:'2-digit', month:'short', year:'numeric'});
+  el.innerHTML = `
+    <button id="menuToggle" onclick="openSidebar()">&#9776;</button>
+    <div class="company-id">
+      <div class="c-name">${escapeHtml(DATA.company.name)}</div>
+      <div class="c-meta">${escapeHtml(DATA.company.cin)} · ${escapeHtml(DATA.company.listing)}</div>
+    </div>
+    <div class="topbar-search">
+      <span class="k">&#128269;</span>
+      <input type="text" id="globalSearch" placeholder="Search tasks, agendas, meetings…" oninput="handleGlobalSearch(this.value)">
+    </div>
+    <div class="topbar-right">
+      <span class="tb-date">${todayStr}</span>
+      <button class="icon-btn" title="Governance AI Assistant" onclick="toggleAI(true)">&#129302;</button>
+      <button class="icon-btn" title="Notifications" onclick="goTo('dashboard')">&#128276;<span class="dot" style="${countAllAlerts()>0?'':'display:none'}"></span></button>
+      <button class="btn btn-primary" onclick="openQuickAdd()">+ <span class="btn-label">Add New</span></button>
+      <div class="avatar" title="${escapeHtml(DATA.director.name)}">${initials(DATA.director.name)}</div>
+    </div>
+  `;
+}
+function initials(name){ return (name||'').split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase(); }
+
+function openSidebar(){ document.getElementById('sidebar').classList.add('open'); document.getElementById('sidebarScrim').classList.add('open'); }
+function closeSidebar(){ document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebarScrim').classList.remove('open'); }
+
+function handleGlobalSearch(q){
+  if(!q || q.trim().length<2) return;
+  q = q.trim().toLowerCase();
+  // Route to the most relevant module based on simple keyword match, then filter there.
+  let target = 'dashboard';
+  if(/rpt|related.party/.test(q)) target='rpt';
+  else if(/agenda/.test(q)) target='agenda';
+  else if(/minute|voting/.test(q)) target='minutes';
+  else if(/disclos|mbp|dir-8|dir8/.test(q)) target='disclosures';
+  else if(/audit/.test(q)) target='audit';
+  else if(/meeting|board/.test(q)) target='boardMeetings';
+  else if(/committee/.test(q)) target='committeeMeetings';
+  else if(/task|action/.test(q)) target='actions';
+  else if(/calendar|deadline|compliance/.test(q)) target='calendar';
+  if(target!==CURRENT_PAGE){ goTo(target); }
+  setTimeout(()=>{ const f = document.getElementById('moduleSearchInput'); if(f){ f.value=q; f.dispatchEvent(new Event('input')); } },30);
+}
+
+function goTo(pageId){
+  CURRENT_PAGE = pageId;
+  closeSidebar();
+  renderSidebar();
+  renderPage();
+  window.scrollTo(0,0);
+}
+
+function renderPage(){
+  const el = document.getElementById('pageContent');
+  switch(CURRENT_PAGE){
+    case 'dashboard': el.innerHTML = renderDashboard(); break;
+    case 'scorecard': el.innerHTML = renderScorecard(); break;
+    case 'actions': el.innerHTML = renderModulePage('actionItems'); break;
+    case 'followup': el.innerHTML = renderModulePage('actionItems', {presetStatus:'Pending', title:'Follow-up Tracker', sub:'Open action items awaiting follow-up across all meetings.'}); break;
+    case 'calendar': el.innerHTML = renderCalendarPage(); break;
+    case 'boardMeetings': el.innerHTML = renderMeetingsPage('Board'); break;
+    case 'committeeMeetings': el.innerHTML = renderMeetingsPage('Committee'); break;
+    case 'agenda': el.innerHTML = renderModulePage('agendaItems'); break;
+    case 'minutes': el.innerHTML = renderModulePage('minutes'); break;
+    case 'disclosures': el.innerHTML = renderModulePage('disclosures'); break;
+    case 'audit': el.innerHTML = renderModulePage('auditObservations'); break;
+    case 'rpt': el.innerHTML = renderModulePage('rpts'); break;
+    case 'erm': el.innerHTML = renderModulePage('erm'); break;
+    case 'ifc': el.innerHTML = renderModulePage('ifc'); break;
+    case 'reports': el.innerHTML = renderReportsPage(); break;
+    case 'settings': el.innerHTML = renderSettingsPage(); break;
+    default: el.innerHTML = renderDashboard();
+  }
+}
+
+/* =========================================================================
+   Generic module (register) engine — used by Action Items, Agenda, Minutes,
+   Disclosures, Audit Observations, RPTs, ERM, IFC.
+   ========================================================================= */
+const MODULES = {
+  actionItems:{
+    label:'Action Items', icon:'&#9745;', dataKey:'actionItems',
+    title:'My Action Items', sub:'Track, assign and close out your governance and compliance tasks.',
+    statusField:'status', statusOptions:['Pending','In Progress','Completed','Overdue'],
+    statusColor:{Pending:'gray', 'In Progress':'blue', Completed:'green', Overdue:'red'},
+    columns:[
+      {key:'title', label:'Task'},
+      {key:'responsible', label:'Responsible'},
+      {key:'meetingRef', label:'Meeting Ref.'},
+      {key:'dueDate', label:'Due Date', type:'date'},
+      {key:'priority', label:'Priority', type:'pill', pillMap:{High:'red', Medium:'amber', Low:'gray'}},
+      {key:'status', label:'Status', type:'status'},
+    ],
+    fields:[
+      {key:'title', label:'Task Title', type:'text', required:true, full:true},
+      {key:'description', label:'Description', type:'textarea', full:true},
+      {key:'responsible', label:'Responsible Person', type:'text', required:true},
+      {key:'meetingRef', label:'Meeting Reference', type:'text'},
+      {key:'dueDate', label:'Due Date', type:'date', required:true},
+      {key:'priority', label:'Priority', type:'select', options:['High','Medium','Low'], required:true},
+      {key:'status', label:'Status', type:'select', options:['Pending','In Progress','Completed','Overdue'], required:true},
+      {key:'remarks', label:'Remarks', type:'textarea', full:true},
+    ],
+    quickActions:[
+      {label:'Mark In Progress', status:'In Progress'},
+      {label:'Complete', status:'Completed'},
+    ],
+  },
+  agendaItems:{
+    label:'Agenda Items', icon:'&#128196;', dataKey:'agendaItems',
+    title:'Agenda Review', sub:'Review agenda items ahead of upcoming board and committee meetings.',
+    statusField:'status', statusOptions:['Pending Review','Reviewed','Clarification Required'],
+    statusColor:{'Pending Review':'amber', Reviewed:'green', 'Clarification Required':'red'},
+    columns:[
+      {key:'number', label:'Item'},
+      {key:'subject', label:'Subject'},
+      {key:'meetingRef', label:'Meeting'},
+      {key:'riskAssessment', label:'Risk', type:'pill', pillMap:{High:'red', Medium:'amber', Low:'green'}},
+      {key:'status', label:'Status', type:'status'},
+    ],
+    fields:[
+      {key:'meetingRef', label:'Meeting Reference', type:'text', required:true},
+      {key:'number', label:'Agenda Item No.', type:'text', required:true},
+      {key:'subject', label:'Subject', type:'text', required:true, full:true},
+      {key:'background', label:'Background Note', type:'textarea', full:true},
+      {key:'financialImpl', label:'Financial Implications', type:'textarea', full:true},
+      {key:'riskAssessment', label:'Risk Assessment', type:'select', options:['Low','Medium','High'], required:true},
+      {key:'recommendation', label:'Recommendation', type:'textarea', full:true},
+      {key:'observations', label:'Director\'s Observations', type:'textarea', full:true},
+      {key:'status', label:'Status', type:'select', options:['Pending Review','Reviewed','Clarification Required'], required:true},
+    ],
+    quickActions:[{label:'Mark Reviewed', status:'Reviewed'}],
+  },
+  minutes:{
+    label:'Minutes', icon:'&#128221;', dataKey:'minutes',
+    title:'Minutes & Voting Records', sub:'Meeting-wise resolutions, voting outcomes and follow-up actions.',
+    columns:[
+      {key:'meetingRef', label:'Meeting'},
+      {key:'resolutionText', label:'Resolution'},
+      {key:'votesFor', label:'For'},
+      {key:'votesAgainst', label:'Against'},
+      {key:'abstain', label:'Abstain'},
+    ],
+    fields:[
+      {key:'meetingRef', label:'Meeting Reference', type:'text', required:true, full:true},
+      {key:'resolutionText', label:'Resolution', type:'textarea', required:true, full:true},
+      {key:'votesFor', label:'Votes For', type:'number'},
+      {key:'votesAgainst', label:'Votes Against', type:'number'},
+      {key:'abstain', label:'Abstentions', type:'number'},
+      {key:'dissent', label:'Dissenting Opinion', type:'textarea', full:true},
+      {key:'directorObservations', label:'Director\'s Observations', type:'textarea', full:true},
+      {key:'followUp', label:'Follow-up Action', type:'text', full:true},
+    ],
+  },
+  disclosures:{
+    label:'Disclosures', icon:'&#9888;', dataKey:'disclosures',
+    title:'Disclosures & Declarations', sub:'MBP-1, DIR-8 and other statutory declarations — submission and validity tracking.',
+    statusField:'status', statusOptions:['Filed','Pending','Expiring Soon','Overdue'],
+    statusColor:{Filed:'green', Pending:'amber', 'Expiring Soon':'amber', Overdue:'red'},
+    columns:[
+      {key:'type', label:'Declaration Type'},
+      {key:'submissionDate', label:'Submitted', type:'date'},
+      {key:'validity', label:'Valid Until', type:'date'},
+      {key:'status', label:'Status', type:'status'},
+    ],
+    fields:[
+      {key:'type', label:'Declaration Type', type:'select', options:['MBP-1','DIR-8','Annual Declaration','Disclosure of Interest','Related-Party Interest','Other'], required:true},
+      {key:'submissionDate', label:'Submission Date', type:'date'},
+      {key:'validity', label:'Valid Until', type:'date'},
+      {key:'status', label:'Status', type:'select', options:['Filed','Pending','Expiring Soon','Overdue'], required:true},
+      {key:'notes', label:'Notes', type:'textarea', full:true},
+    ],
+    quickActions:[{label:'File Declaration', status:'Filed'}],
+  },
+  auditObservations:{
+    label:'Audit Observations', icon:'&#128176;', dataKey:'auditObservations',
+    title:'Financial & Audit Oversight', sub:'Internal and statutory audit observations, risk ratings and closure tracking.',
+    statusField:'status', statusOptions:['Open','In Progress','Closed'],
+    statusColor:{Open:'red', 'In Progress':'amber', Closed:'green'},
+    columns:[
+      {key:'area', label:'Audit Area'},
+      {key:'riskRating', label:'Risk', type:'pill', pillMap:{High:'red', Medium:'amber', Low:'green'}},
+      {key:'responsible', label:'Responsible'},
+      {key:'targetDate', label:'Target Date', type:'date'},
+      {key:'status', label:'Status', type:'status'},
+    ],
+    fields:[
+      {key:'area', label:'Audit Area / Observation', type:'text', required:true, full:true},
+      {key:'riskRating', label:'Risk Rating', type:'select', options:['High','Medium','Low'], required:true},
+      {key:'responsible', label:'Responsible Person', type:'text', required:true},
+      {key:'targetDate', label:'Target Closure Date', type:'date'},
+      {key:'status', label:'Status', type:'select', options:['Open','In Progress','Closed'], required:true},
+      {key:'notes', label:'Notes', type:'textarea', full:true},
+    ],
+    quickActions:[{label:'Mark Closed', status:'Closed'}],
+  },
+  rpts:{
+    label:'Related-Party Transactions', icon:'&#128260;', dataKey:'rpts',
+    title:'Related-Party Transactions', sub:'Register of proposed and approved related-party transactions.',
+    statusField:'status', statusOptions:['Proposed','Pending Approval','Approved','Rejected'],
+    statusColor:{Proposed:'gray', 'Pending Approval':'amber', Approved:'green', Rejected:'red'},
+    columns:[
+      {key:'party', label:'Related Party'},
+      {key:'nature', label:'Nature of Transaction'},
+      {key:'value', label:'Value', type:'money'},
+      {key:'approvalRequired', label:'Approval Level'},
+      {key:'status', label:'Status', type:'status'},
+    ],
+    fields:[
+      {key:'party', label:'Related Party', type:'text', required:true, full:true},
+      {key:'relationship', label:'Nature of Relationship', type:'text', required:true},
+      {key:'value', label:'Transaction Value (₹)', type:'number', required:true},
+      {key:'nature', label:'Nature of Transaction', type:'text', full:true},
+      {key:'approvalRequired', label:'Approval Required', type:'select', options:['Board','Audit Committee','Shareholders','Not Required']},
+      {key:'status', label:'Status', type:'select', options:['Proposed','Pending Approval','Approved','Rejected'], required:true},
+      {key:'notes', label:'Supporting Notes', type:'textarea', full:true},
+    ],
+    quickActions:[{label:'Approve', status:'Approved'}],
+  },
+  erm:{
+    label:'Enterprise Risks', icon:'&#9889;', dataKey:'erm',
+    title:'Enterprise Risk Management', sub:'Key enterprise risks, mitigation status and ownership.',
+    statusField:'status', statusOptions:['Open','Monitoring','Closed'],
+    statusColor:{Open:'red', Monitoring:'amber', Closed:'green'},
+    columns:[
+      {key:'riskArea', label:'Risk Area'},
+      {key:'riskRating', label:'Rating', type:'pill', pillMap:{High:'red', Medium:'amber', Low:'green'}},
+      {key:'owner', label:'Owner'},
+      {key:'status', label:'Status', type:'status'},
+    ],
+    fields:[
+      {key:'riskArea', label:'Risk Area', type:'text', required:true, full:true},
+      {key:'riskRating', label:'Risk Rating', type:'select', options:['High','Medium','Low'], required:true},
+      {key:'mitigation', label:'Mitigation Plan', type:'textarea', full:true},
+      {key:'owner', label:'Risk Owner', type:'text', required:true},
+      {key:'status', label:'Status', type:'select', options:['Open','Monitoring','Closed'], required:true},
+    ],
+  },
+  ifc:{
+    label:'Internal Financial Controls', icon:'&#128272;', dataKey:'ifc',
+    title:'Internal Financial Controls', sub:'Control testing status across key financial processes.',
+    statusField:'testStatus', statusOptions:['Effective','Deficient','Not Tested'],
+    statusColor:{Effective:'green', Deficient:'red', 'Not Tested':'gray'},
+    columns:[
+      {key:'controlArea', label:'Control Area'},
+      {key:'testStatus', label:'Test Status', type:'status'},
+      {key:'lastTested', label:'Last Tested', type:'date'},
+    ],
+    fields:[
+      {key:'controlArea', label:'Control Area', type:'text', required:true, full:true},
+      {key:'testStatus', label:'Test Status', type:'select', options:['Effective','Deficient','Not Tested'], required:true},
+      {key:'lastTested', label:'Last Tested', type:'date'},
+      {key:'remarks', label:'Remarks', type:'textarea', full:true},
+    ],
+  },
+};
+
+let MODULE_FILTER = { search:'', status:'All' };
+
+function renderModulePage(moduleKey, opts){
+  opts = opts||{};
+  const mod = MODULES[moduleKey];
+  const title = opts.title || mod.title;
+  const sub = opts.sub || mod.sub;
+  let records = DATA[mod.dataKey] || [];
+  if(opts.presetStatus){ records = records.filter(r=> r[mod.statusField] !== 'Completed'); }
+
+  const q = (MODULE_FILTER.search||'').toLowerCase();
+  let filtered = records.filter(r=>{
+    if(q){
+      const hay = Object.values(r).join(' ').toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    if(mod.statusField && MODULE_FILTER.status!=='All' && r[mod.statusField]!==MODULE_FILTER.status) return false;
+    return true;
+  });
+
+  const statusOptionsHtml = mod.statusOptions ? `
+    <select onchange="MODULE_FILTER.status=this.value; renderPage();">
+      <option value="All" ${MODULE_FILTER.status==='All'?'selected':''}>All Statuses</option>
+      ${mod.statusOptions.map(s=>`<option value="${s}" ${MODULE_FILTER.status===s?'selected':''}>${s}</option>`).join('')}
+    </select>` : '';
+
+  return `
+    <div class="page-head">
+      <div><h1>${escapeHtml(title)}</h1><div class="sub">${escapeHtml(sub)}</div></div>
+      <div class="page-head-actions">
+        <button class="btn btn-ghost" onclick="exportCsv('${moduleKey}')">&#8681; Export CSV</button>
+        <button class="btn btn-primary" onclick="openRecordForm('${moduleKey}', null)">+ New Record</button>
+      </div>
+    </div>
+    <div class="toolbar">
+      <input type="text" id="moduleSearchInput" placeholder="Search ${escapeHtml(mod.label.toLowerCase())}…" value="${escapeHtml(MODULE_FILTER.search)}" oninput="MODULE_FILTER.search=this.value; renderPage();">
+      ${statusOptionsHtml}
+      <span class="small-muted">${filtered.length} of ${records.length} records</span>
+    </div>
+    ${renderModuleTable(moduleKey, filtered)}
+  `;
+}
+
+function renderModuleTable(moduleKey, records){
+  const mod = MODULES[moduleKey];
+  if(records.length===0){
+    return `<div class="table-wrap"><div class="empty-state">
+      <div class="ei">&#128194;</div>
+      <div class="et">No records found</div>
+      <div class="ed">Try adjusting your filters, or add a new record to get started.</div>
+    </div></div>`;
+  }
+  let html = `<div class="table-wrap"><table><thead><tr>`;
+  mod.columns.forEach(c=> html += `<th>${escapeHtml(c.label)}</th>`);
+  html += `<th>Actions</th></tr></thead><tbody>`;
+  records.forEach(r=>{
+    html += `<tr>`;
+    mod.columns.forEach(c=>{
+      html += `<td>${renderCell(r, c)}</td>`;
+    });
+    html += `<td class="td-actions">
+      <a class="icon-link" title="Edit" onclick="openRecordForm('${moduleKey}','${r.id}')">&#9998;</a>
+      <a class="icon-link" title="Delete" onclick="deleteRecord('${moduleKey}','${r.id}')">&#128465;</a>
+    </td>`;
+    html += `</tr>`;
+  });
+  html += `</tbody></table></div>`;
+  return html;
+}
+function renderCell(r, c){
+  const v = r[c.key];
+  if(c.type==='date') return v ? (daysUntil(v)<0 && r.status!=='Completed' && r.status!=='Closed' && r.testStatus!=='Effective' ? `<span style="color:var(--red)">${fmtDate(v)}</span>` : fmtDate(v)) : '—';
+  if(c.type==='money') return money(v);
+  if(c.type==='pill'){ const cls = (c.pillMap&&c.pillMap[v])||'gray'; return v? `<span class="pill pill-${cls}">${escapeHtml(v)}</span>`:'—'; }
+  if(c.type==='status'){
+    const mod = Object.values(MODULES).find(m=>m.statusColor && m.statusOptions && m.statusOptions.includes(v));
+    const cls = (mod && mod.statusColor[v]) || 'gray';
+    return v? `<span class="pill pill-${cls}">${escapeHtml(v)}</span>` : '—';
+  }
+  if(!v) return '—';
+  const s = String(v);
+  return escapeHtml(s.length>70? s.slice(0,67)+'…' : s);
+}
+
+/* ---- Record form (add/edit) ---- */
+function openRecordForm(moduleKey, id){
+  const mod = MODULES[moduleKey];
+  const record = id ? (DATA[mod.dataKey].find(r=>r.id===id) || {}) : {};
+  const isEdit = !!id;
+  const fieldsHtml = mod.fields.map(f=>{
+    const val = record[f.key]!==undefined ? record[f.key] : '';
+    return `<div class="form-field ${f.full?'full':''}">
+      <label>${escapeHtml(f.label)}${f.required?' *':''}</label>
+      ${renderFieldInput(f, val)}
+    </div>`;
+  }).join('');
+
+  showModal(`
+    <div class="modal-head">
+      <h3>${isEdit?'Edit':'New'} ${escapeHtml(mod.label.replace(/s$/,''))} Record</h3>
+      <button class="modal-close" onclick="closeModal()">&#10005;</button>
+    </div>
+    <form id="recordForm" onsubmit="return submitRecordForm(event,'${moduleKey}','${id||''}')">
+      <div class="form-grid">${fieldsHtml}</div>
+      <div class="modal-foot">
+        <div>${isEdit?`<button type="button" class="btn btn-danger btn-sm" onclick="deleteRecord('${moduleKey}','${id}'); closeModal();">Delete Record</button>`:''}</div>
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary">${isEdit?'Save Changes':'Create Record'}</button>
+        </div>
+      </div>
+    </form>
+  `);
+}
+function renderFieldInput(f, val){
+  const name = f.key;
+  if(f.type==='select'){
+    return `<select name="${name}">${(f.options||[]).map(o=>`<option value="${escapeHtml(o)}" ${val===o?'selected':''}>${escapeHtml(o)}</option>`).join('')}</select>`;
+  }
+  if(f.type==='textarea'){
+    return `<textarea name="${name}">${escapeHtml(val)}</textarea>`;
+  }
+  if(f.type==='checkbox'){
+    return `<input type="checkbox" name="${name}" ${val?'checked':''} style="width:18px; height:18px;">`;
+  }
+  return `<input type="${f.type||'text'}" name="${name}" value="${escapeHtml(val)}" ${f.required?'required':''}>`;
+}
+function submitRecordForm(evt, moduleKey, id){
+  evt.preventDefault();
+  const mod = MODULES[moduleKey];
+  const form = evt.target;
+  const record = id ? (DATA[mod.dataKey].find(r=>r.id===id)) : { id: uid(moduleKey.slice(0,2)) };
+  mod.fields.forEach(f=>{
+    const el = form.elements[f.key];
+    if(!el) return;
+    record[f.key] = f.type==='checkbox' ? el.checked : el.value;
+  });
+  if(!id){ DATA[mod.dataKey].push(record); }
+  saveAll();
+  closeModal();
+  toast(id? 'Record updated.' : 'Record created.');
+  renderTopbar(); renderSidebar(); renderPage();
+  return false;
+}
+function deleteRecord(moduleKey, id){
+  if(!confirm('Delete this record? This cannot be undone.')) return;
+  const mod = MODULES[moduleKey];
+  DATA[mod.dataKey] = DATA[mod.dataKey].filter(r=>r.id!==id);
+  saveAll();
+  toast('Record deleted.');
+  renderTopbar(); renderSidebar(); renderPage();
+}
+function quickSetStatus(moduleKey, id, status){
+  const mod = MODULES[moduleKey];
+  const r = DATA[mod.dataKey].find(x=>x.id===id);
+  if(!r) return;
+  r[mod.statusField] = status;
+  saveAll();
+  toast(`Status updated to "${status}".`);
+  renderTopbar(); renderSidebar(); renderPage();
+}
+
+/* ---- CSV export ---- */
+function exportCsv(moduleKey){
+  const mod = MODULES[moduleKey];
+  const rows = DATA[mod.dataKey];
+  if(!rows.length){ toast('No records to export.', true); return; }
+  const headers = mod.fields.map(f=>f.key);
+  const lines = [headers.join(',')];
+  rows.forEach(r=>{
+    lines.push(headers.map(h=>{
+      let v = r[h]===undefined? '' : String(r[h]);
+      v = v.replace(/"/g,'""');
+      return /[,"\n]/.test(v) ? `"${v}"` : v;
+    }).join(','));
+  });
+  downloadFile(`${moduleKey}_export_${new Date().toISOString().slice(0,10)}.csv`, lines.join('\n'), 'text/csv');
+}
+function downloadFile(filename, content, mime){
+  const blob = new Blob([content], {type:mime||'text/plain'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+  toast('Download started: ' + filename);
+}
+
+/* ---- Modal ---- */
+function showModal(innerHtml){
+  document.getElementById('modalRoot').innerHTML = `
+    <div class="modal-overlay" onclick="if(event.target===this) closeModal()">
+      <div class="modal">${innerHtml}</div>
+    </div>`;
+}
+function closeModal(){ document.getElementById('modalRoot').innerHTML = ''; }
+
+/* =========================================================================
+   Alerts engine (used by Dashboard "What Needs My Attention?")
+   ========================================================================= */
+function buildAlerts(){
+  const alerts = [];
+  // Overdue action items
+  DATA.actionItems.filter(a=>a.status!=='Completed' && a.dueDate && daysUntil(a.dueDate)<0).forEach(a=>{
+    alerts.push({priority:'high', title:a.title, desc:`Overdue action item — ${a.responsible||'Unassigned'}.`, meta:`Due ${fmtDate(a.dueDate)} · ${Math.abs(daysUntil(a.dueDate))} days overdue`,
+      actions:[{label:'Mark In Progress', fn:()=>quickSetStatus('actionItems',a.id,'In Progress')},{label:'Complete', fn:()=>quickSetStatus('actionItems',a.id,'Completed')}], goto:'actions'});
+  });
+  // Upcoming statutory compliance deadlines
+  DATA.complianceEvents.filter(c=>!c.completed && c.dueDate && daysUntil(c.dueDate)<=14).forEach(c=>{
+    const overdue = daysUntil(c.dueDate)<0;
+    alerts.push({priority: overdue?'high': (daysUntil(c.dueDate)<=5?'medium':'low'), title:c.title, desc:`${c.area} — statutory compliance deadline.`,
+      meta: overdue? `Overdue by ${Math.abs(daysUntil(c.dueDate))} days` : `Due in ${daysUntil(c.dueDate)} days (${fmtDate(c.dueDate)})`,
+      actions:[{label:'Mark Complete', fn:()=>{ c.completed=true; saveAll(); toast('Marked complete.'); renderTopbar();renderSidebar();renderPage(); }}], goto:'calendar'});
+  });
+  // Agenda review pending
+  DATA.agendaItems.filter(a=>a.status==='Pending Review' || a.status==='Clarification Required').forEach(a=>{
+    alerts.push({priority: a.status==='Clarification Required'?'medium':'low', title:`Review agenda: ${a.subject}`, desc:`${a.meetingRef} — ${a.status}.`,
+      meta:`Agenda ${a.number}`, actions:[{label:'Review', fn:()=>openRecordForm('agendaItems', a.id)}], goto:'agenda'});
+  });
+  // SEBI trading window (from compliance events already covered above by keyword) — add explicit high-visibility one if present
+  // Pending declarations
+  DATA.disclosures.filter(d=>d.status==='Pending' || d.status==='Overdue' || d.status==='Expiring Soon').forEach(d=>{
+    alerts.push({priority: d.status==='Overdue'?'high':'medium', title:`${d.type} — ${d.status}`, desc:'Statutory declaration requires attention.',
+      meta: d.validity? `Valid until ${fmtDate(d.validity)}`:'', actions:[{label:'File Declaration', fn:()=>quickSetStatus('disclosures',d.id,'Filed')}], goto:'disclosures'});
+  });
+  // Outstanding audit observations
+  DATA.auditObservations.filter(a=>a.status!=='Closed').forEach(a=>{
+    alerts.push({priority: a.riskRating==='High'?'high':(a.riskRating==='Medium'?'medium':'low'), title:`Audit observation: ${a.area}`, desc:`Risk: ${a.riskRating} · Owner: ${a.responsible}`,
+      meta: a.targetDate? `Target closure ${fmtDate(a.targetDate)}`:'', actions:[{label:'View Documents', fn:()=>openRecordForm('auditObservations', a.id)}], goto:'audit'});
+  });
+  // Pending RPT approvals
+  DATA.rpts.filter(r=>r.status==='Pending Approval' || r.status==='Proposed').forEach(r=>{
+    alerts.push({priority: r.status==='Pending Approval'?'medium':'low', title:`RPT: ${r.party}`, desc:`${r.nature||'Related-party transaction'} — ${money(r.value)}`,
+      meta:`Approval required: ${r.approvalRequired}`, actions:[{label:'Review', fn:()=>openRecordForm('rpts', r.id)}], goto:'rpt'});
+  });
+  // Incomplete action items (not overdue, general)
+  const priorityOrder = {high:0, medium:1, low:2};
+  alerts.sort((a,b)=>priorityOrder[a.priority]-priorityOrder[b.priority]);
+  return alerts;
+}
+function countAllAlerts(){ return buildAlerts().filter(a=>a.priority==='high').length; }
+let ALERT_HANDLERS = [];
+function renderAlerts(limit){
+  const alerts = buildAlerts();
+  ALERT_HANDLERS = alerts;
+  const shown = limit ? alerts.slice(0,limit) : alerts;
+  if(shown.length===0){
+    return `<div class="empty-state"><div class="ei">&#9989;</div><div class="et">All clear</div><div class="ed">No items currently need your attention.</div></div>`;
+  }
+  return shown.map((a,i)=>`
+    <div class="alert-row ${a.priority}">
+      <div class="bar"></div>
+      <div class="alert-body">
+        <div class="top">
+          <span class="ttl">${escapeHtml(a.title)}</span>
+          <span class="pill pill-${a.priority==='high'?'red':a.priority==='medium'?'amber':'gray'}">${a.priority.toUpperCase()}</span>
+        </div>
+        <div class="desc">${escapeHtml(a.desc)}</div>
+        <div class="meta">${escapeHtml(a.meta||'')}</div>
+        <div class="alert-actions mt8">
+          ${a.actions.map((act,ai)=>`<button class="btn btn-sm btn-ghost" onclick="ALERT_HANDLERS[${i}].actions[${ai}].fn()">${escapeHtml(act.label)}</button>`).join('')}
+          <button class="btn btn-sm btn-ghost" onclick="goTo('${a.goto}')">Open Module</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+/* =========================================================================
+   Executive Dashboard
+   ========================================================================= */
+function governanceScore(){
+  const areas = DATA.complianceAreas;
+  if(!areas.length) return 0;
+  return Math.round(areas.reduce((s,a)=>s+Number(a.percent||0),0)/areas.length);
+}
+function complianceRate(){ return governanceScore(); }
+
+function renderDashboard(){
+  const score = governanceScore();
+  const highAlerts = buildAlerts().filter(a=>a.priority==='high').length;
+  const tasksDue7 = DATA.actionItems.filter(a=>a.status!=='Completed' && a.dueDate && daysUntil(a.dueDate)>=0 && daysUntil(a.dueDate)<=7).length;
+  const upcomingMeetings = DATA.meetings.filter(m=> m.date && daysUntil(m.date)>=0).length;
+  const openAudit = DATA.auditObservations.filter(a=>a.status!=='Closed').length;
+  const pendingDisclosures = DATA.disclosures.filter(d=>d.status!=='Filed').length;
+  const overdueActions = countOverdueActions();
+
+  return `
+    <div class="disclaimer-strip">
+      <span>&#9888;</span>
+      <span>DirectorDesk is a governance management tool for tracking and organising compliance activity. It is not a substitute for professional legal advice or official regulatory verification. Sample records shown are illustrative.</span>
+    </div>
+
+    <div class="section card" style="padding:20px;">
+      <div class="flex-between" style="flex-wrap:wrap; gap:16px;">
+        <div>
+          <div class="small-muted">Welcome back</div>
+          <h1 style="font-size:20px; margin:2px 0 6px;">${escapeHtml(DATA.director.name)} <span style="color:var(--text-faint); font-weight:500; font-size:14px;">· ${escapeHtml(DATA.director.designation)}</span></h1>
+          <div class="small-muted">${escapeHtml(DATA.company.name)} · CIN ${escapeHtml(DATA.company.cin)} · ${new Date().toLocaleDateString('en-IN',{weekday:'long',day:'2-digit',month:'long',year:'numeric'})}</div>
+        </div>
+        <div style="text-align:center; min-width:140px;">
+          <div style="font-size:34px; font-weight:800; color:${score>=85?'var(--green)':score>=70?'var(--amber)':'var(--red)'}; letter-spacing:-1px;">${score}<span style="font-size:16px; color:var(--text-faint);">/100</span></div>
+          <div class="small-muted">Governance Score</div>
+        </div>
+      </div>
+      <div class="mt16" style="display:flex; gap:16px; flex-wrap:wrap;">
+        <span class="pill ${highAlerts>0?'pill-red':'pill-green'}">${highAlerts>0? highAlerts+' High-Priority Alert'+(highAlerts>1?'s':'') : 'No High-Priority Alerts'}</span>
+        <span class="pill pill-gray">${overdueActions} Overdue Task${overdueActions!==1?'s':''}</span>
+        <span class="pill pill-blue">${upcomingMeetings} Upcoming Meeting${upcomingMeetings!==1?'s':''}</span>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><h2>What Needs My Attention?</h2><span class="link" onclick="goTo('actions')">View all tasks →</span></div>
+      ${renderAlerts(6)}
+    </div>
+
+    <div class="section">
+      <div class="section-head"><h2>Key Performance Indicators</h2></div>
+      <div class="grid g-4">
+        <div class="card kpi"><div class="label">Overall Compliance Rate</div><div class="value">${complianceRate()}%</div><div class="foot ${complianceRate()>=80?'up':'down'}">${complianceRate()>=80?'On track':'Needs attention'}</div></div>
+        <div class="card kpi"><div class="label">Tasks Due Within 7 Days</div><div class="value">${tasksDue7}</div><div class="foot">${overdueActions} already overdue</div></div>
+        <div class="card kpi"><div class="label">Upcoming Board & Committee Meetings</div><div class="value">${upcomingMeetings}</div><div class="foot">Next: ${nextMeetingLabel()}</div></div>
+        <div class="card kpi"><div class="label">Open Audit Observations</div><div class="value">${openAudit}</div><div class="foot">${DATA.auditObservations.filter(a=>a.riskRating==='High'&&a.status!=='Closed').length} high risk</div></div>
+        <div class="card kpi"><div class="label">Pending Disclosures</div><div class="value">${pendingDisclosures}</div><div class="foot">${DATA.disclosures.filter(d=>d.status==='Overdue').length} overdue</div></div>
+        <div class="card kpi"><div class="label">Overdue Action Items</div><div class="value" style="color:${overdueActions>0?'var(--red)':'var(--text)'}">${overdueActions}</div><div class="foot">${DATA.actionItems.filter(a=>a.status==='Completed').length} completed to date</div></div>
+        <div class="card kpi"><div class="label">Pending RPT Approvals</div><div class="value">${DATA.rpts.filter(r=>r.status!=='Approved'&&r.status!=='Rejected').length}</div><div class="foot">of ${DATA.rpts.length} total transactions</div></div>
+        <div class="card kpi"><div class="label">Open Enterprise Risks</div><div class="value">${DATA.erm.filter(r=>r.status!=='Closed').length}</div><div class="foot">${DATA.erm.filter(r=>r.riskRating==='High').length} rated high</div></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head"><h2>Statutory & Governance Heatmap</h2><span class="link" onclick="goTo('scorecard')">Full scorecard →</span></div>
+      <div class="heat-grid">${DATA.complianceAreas.map(a=>renderHeatCell(a)).join('')}</div>
+    </div>
+
+    <div class="grid g-2">
+      <div class="section">
+        <div class="section-head"><h2>Upcoming Meetings</h2><span class="link" onclick="goTo('boardMeetings')">View all →</span></div>
+        ${renderUpcomingMeetings()}
+      </div>
+      <div class="section">
+        <div class="section-head"><h2>Director Quick Access</h2></div>
+        <div class="grid g-2">
+          ${quickCard('&#9745;','Action Items', DATA.actionItems.filter(a=>a.status!=='Completed').length+' open', 'actions')}
+          ${quickCard('&#128196;','Agenda Review', DATA.agendaItems.filter(a=>a.status!=='Reviewed').length+' pending', 'agenda')}
+          ${quickCard('&#128221;','Minutes & Voting', DATA.minutes.length+' records', 'minutes')}
+          ${quickCard('&#9888;','Disclosures', DATA.disclosures.filter(d=>d.status!=='Filed').length+' pending', 'disclosures')}
+          ${quickCard('&#128176;','Audit Oversight', DATA.auditObservations.filter(a=>a.status!=='Closed').length+' open', 'audit')}
+          ${quickCard('&#128260;','RPT Register', DATA.rpts.length+' transactions', 'rpt')}
+        </div>
+      </div>
+    </div>
+  `;
+}
+function quickCard(icon,title,sub,pageId){
+  return `<div class="quick-card" onclick="goTo('${pageId}')"><div class="qi">${icon}</div><div class="qt">${title}</div><div class="qc">${sub}</div></div>`;
+}
+function nextMeetingLabel(){
+  const upcoming = DATA.meetings.filter(m=>m.date && daysUntil(m.date)>=0).sort((a,b)=>new Date(a.date)-new Date(b.date));
+  if(!upcoming.length) return 'None scheduled';
+  return `${fmtDate(upcoming[0].date)}`;
+}
+function renderHeatCell(a){
+  const color = a.status==='Compliant'?'var(--green)':a.status==='Overdue'?'var(--red)':'var(--amber)';
+  return `<div class="heat-cell" onclick="openAreaDetail('${a.id}')">
+    <div class="name">${escapeHtml(a.name)}</div>
+    <div class="heat-bar-track"><div class="heat-bar-fill" style="width:${a.percent}%; background:${color};"></div></div>
+    <div class="flex-between"><span class="pct">${a.percent}%</span><span class="pill pill-${a.status==='Compliant'?'green':a.status==='Overdue'?'red':'amber'}">${a.status}</span></div>
+  </div>`;
+}
+function openAreaDetail(areaId){
+  const a = DATA.complianceAreas.find(x=>x.id===areaId);
+  if(!a) return;
+  showModal(`
+    <div class="modal-head"><h3>${escapeHtml(a.name)}</h3><button class="modal-close" onclick="closeModal()">&#10005;</button></div>
+    <div class="grid g-2" style="margin-bottom:14px;">
+      <div class="card kpi"><div class="label">Completion</div><div class="value">${a.percent}%</div></div>
+      <div class="card kpi"><div class="label">Status</div><div class="value" style="font-size:16px;"><span class="pill pill-${a.status==='Compliant'?'green':a.status==='Overdue'?'red':'amber'}">${a.status}</span></div></div>
+    </div>
+    <div class="form-field"><label>Pending Action</label><div class="small-muted">${escapeHtml(a.pending||'None')}</div></div>
+    <div class="form-field mt12"><label>Applicable Deadline</label><div class="small-muted">${fmtDate(a.deadline)}</div></div>
+    <div class="modal-foot"><div></div><button class="btn btn-primary" onclick="closeModal()">Close</button></div>
+  `);
+}
+function renderUpcomingMeetings(){
+  const upcoming = DATA.meetings.filter(m=>m.date && daysUntil(m.date)>=-1).sort((a,b)=>new Date(a.date)-new Date(b.date)).slice(0,4);
+  if(!upcoming.length) return `<div class="empty-state"><div class="ei">&#128197;</div><div class="et">No upcoming meetings</div></div>`;
+  return upcoming.map(m=>renderMeetingCard(m)).join('');
+}
+function renderMeetingCard(m){
+  const d = daysUntil(m.date);
+  return `<div class="meeting-card">
+    <div class="top">
+      <div>
+        <div class="mtitle">${escapeHtml(m.number)}</div>
+        <div class="mmeta">${escapeHtml(m.type==='Committee'? m.committeeName : 'Board Meeting')} · ${fmtDate(m.date)} ${m.time?('at '+m.time):''}</div>
+        <div class="mmeta">${escapeHtml(m.venue||'')}</div>
+      </div>
+      <span class="pill ${d<0?'pill-gray':d<=2?'pill-red':'pill-blue'}">${d<0?'Past':d===0?'Today':`In ${d}d`}</span>
+    </div>
+    <div class="tags">
+      <span class="pill pill-gray">Notice: ${escapeHtml(m.noticeStatus||'—')}</span>
+      <span class="pill pill-gray">Agenda: ${escapeHtml(m.agendaStatus||'—')}</span>
+      <span class="pill pill-gray">Attendance: ${escapeHtml(m.attendance||'—')}</span>
+    </div>
+    ${m.pendingActions? `<div class="small-muted">${escapeHtml(m.pendingActions)}</div>`:''}
+    <div class="actions">
+      <button class="btn btn-sm btn-ghost" onclick="goTo('agenda')">View Agenda</button>
+      <button class="btn btn-sm btn-ghost" onclick="goTo('agenda')">Review Papers</button>
+      <button class="btn btn-sm btn-ghost" onclick="openMeetingForm('${m.id}')">Edit Meeting</button>
+    </div>
+  </div>`;
+}
+
+/* =========================================================================
+   Governance Scorecard
+   ========================================================================= */
+function renderScorecard(){
+  const score = governanceScore();
+  return `
+    <div class="page-head">
+      <div><h1>Governance Scorecard</h1><div class="sub">Category-wise compliance scores, risk levels and pending matters.</div></div>
+    </div>
+    <div class="card" style="padding:20px; margin-bottom:20px;">
+      <div class="flex-between" style="flex-wrap:wrap; gap:16px;">
+        <div>
+          <div class="small-muted">Overall Governance Score</div>
+          <div style="font-size:36px; font-weight:800; color:${score>=85?'var(--green)':score>=70?'var(--amber)':'var(--red)'};">${score}<span style="font-size:16px; color:var(--text-faint);">/100</span></div>
+        </div>
+        <div style="flex:1; min-width:220px;">
+          <div class="progress-track"><div class="progress-fill" style="width:${score}%; background:${score>=85?'var(--green)':score>=70?'var(--amber)':'var(--red)'};"></div></div>
+          <div class="small-muted mt8">Weighted average across ${DATA.complianceAreas.length} governance and compliance categories.</div>
+        </div>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Category</th><th>Score</th><th>Status</th><th>Pending Matter</th><th>Deadline</th><th>Actions</th></tr></thead>
+        <tbody>
+          ${DATA.complianceAreas.map(a=>`
+            <tr>
+              <td style="font-weight:600;">${escapeHtml(a.name)}</td>
+              <td style="width:140px;"><div class="progress-track"><div class="progress-fill" style="width:${a.percent}%; background:${a.status==='Compliant'?'var(--green)':a.status==='Overdue'?'var(--red)':'var(--amber)'};"></div></div><div class="small-muted mt8">${a.percent}%</div></td>
+              <td><span class="pill pill-${a.status==='Compliant'?'green':a.status==='Overdue'?'red':'amber'}">${a.status}</span></td>
+              <td>${escapeHtml(a.pending||'—')}</td>
+              <td>${fmtDate(a.deadline)}</td>
+              <td><button class="btn btn-sm btn-ghost" onclick="openScoreAreaEdit('${a.id}')">Edit</button></td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+function openScoreAreaEdit(areaId){
+  const a = DATA.complianceAreas.find(x=>x.id===areaId);
+  showModal(`
+    <div class="modal-head"><h3>Edit — ${escapeHtml(a.name)}</h3><button class="modal-close" onclick="closeModal()">&#10005;</button></div>
+    <form onsubmit="return saveScoreArea(event,'${areaId}')">
+      <div class="form-grid">
+        <div class="form-field"><label>Completion %</label><input type="number" name="percent" min="0" max="100" value="${a.percent}"></div>
+        <div class="form-field"><label>Status</label><select name="status">
+          ${['Compliant','Attention','Overdue'].map(s=>`<option ${a.status===s?'selected':''}>${s}</option>`).join('')}
+        </select></div>
+        <div class="form-field full"><label>Pending Matter</label><input type="text" name="pending" value="${escapeHtml(a.pending)}"></div>
+        <div class="form-field"><label>Deadline</label><input type="date" name="deadline" value="${a.deadline||''}"></div>
+      </div>
+      <div class="modal-foot"><div></div><div style="display:flex; gap:8px;"><button type="button" class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary">Save</button></div></div>
+    </form>
+  `);
+}
+function saveScoreArea(evt, areaId){
+  evt.preventDefault();
+  const f = evt.target;
+  const a = DATA.complianceAreas.find(x=>x.id===areaId);
+  a.percent = Number(f.elements.percent.value);
+  a.status = f.elements.status.value;
+  a.pending = f.elements.pending.value;
+  a.deadline = f.elements.deadline.value;
+  saveAll(); closeModal(); toast('Category updated.');
+  renderTopbar(); renderSidebar(); renderPage();
+  return false;
+}
+
+/* =========================================================================
+   Board / Committee Meetings
+   ========================================================================= */
+let MEETING_FILTER = {search:'', status:'All'};
+function renderMeetingsPage(type){
+  const list = DATA.meetings.filter(m=>m.type===type).sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const q = MEETING_FILTER.search.toLowerCase();
+  const filtered = list.filter(m=> !q || JSON.stringify(m).toLowerCase().includes(q));
+  return `
+    <div class="page-head">
+      <div><h1>${type==='Board'?'Board Meetings':'Committee Meetings'}</h1><div class="sub">${type==='Board'?'Register of board meetings — notices, agendas, attendance and voting.':'Register of committee meetings across the Audit, NRC, Stakeholder and other committees.'}</div></div>
+      <div class="page-head-actions">
+        <button class="btn btn-ghost" onclick="exportMeetingsCsv('${type}')">&#8681; Export CSV</button>
+        <button class="btn btn-primary" onclick="openMeetingForm(null,'${type}')">+ Schedule Meeting</button>
+      </div>
+    </div>
+    <div class="toolbar">
+      <input type="text" id="moduleSearchInput" placeholder="Search meetings…" value="${escapeHtml(MEETING_FILTER.search)}" oninput="MEETING_FILTER.search=this.value; renderPage();">
+      <span class="small-muted">${filtered.length} of ${list.length} meetings</span>
+    </div>
+    ${filtered.length? filtered.map(m=>renderMeetingCard(m)).join('') : `<div class="empty-state"><div class="ei">&#128197;</div><div class="et">No meetings found</div><div class="ed">Schedule a new ${type.toLowerCase()} meeting to get started.</div></div>`}
+  `;
+}
+function openMeetingForm(id, defaultType){
+  const m = id ? DATA.meetings.find(x=>x.id===id) : {type:defaultType||'Board'};
+  showModal(`
+    <div class="modal-head"><h3>${id?'Edit':'Schedule'} Meeting</h3><button class="modal-close" onclick="closeModal()">&#10005;</button></div>
+    <form onsubmit="return saveMeeting(event,'${id||''}')">
+      <div class="form-grid">
+        <div class="form-field"><label>Meeting Type *</label><select name="type" id="mtType" onchange="document.getElementById('mtCommitteeWrap').style.display=this.value==='Committee'?'flex':'none';">
+          <option value="Board" ${m.type==='Board'?'selected':''}>Board</option>
+          <option value="Committee" ${m.type==='Committee'?'selected':''}>Committee</option>
+        </select></div>
+        <div class="form-field" id="mtCommitteeWrap" style="display:${m.type==='Committee'?'flex':'none'};"><label>Committee Name</label><input type="text" name="committeeName" value="${escapeHtml(m.committeeName||'')}" placeholder="e.g. Audit Committee"></div>
+        <div class="form-field full"><label>Meeting Number / Title *</label><input type="text" name="number" required value="${escapeHtml(m.number||'')}" placeholder="e.g. Board Meeting No. 48"></div>
+        <div class="form-field"><label>Date *</label><input type="date" name="date" required value="${m.date||''}"></div>
+        <div class="form-field"><label>Time</label><input type="time" name="time" value="${m.time||''}"></div>
+        <div class="form-field full"><label>Venue / Video-Conference Details</label><input type="text" name="venue" value="${escapeHtml(m.venue||'')}"></div>
+        <div class="form-field"><label>Notice Status</label><select name="noticeStatus">${['Not Sent','Pending','Sent'].map(s=>`<option ${m.noticeStatus===s?'selected':''}>${s}</option>`).join('')}</select></div>
+        <div class="form-field"><label>Agenda Status</label><select name="agendaStatus">${['Not Started','Draft','Circulated'].map(s=>`<option ${m.agendaStatus===s?'selected':''}>${s}</option>`).join('')}</select></div>
+        <div class="form-field"><label>Attendance</label><select name="attendance">${['Confirmed','Tentative','Not Confirmed','Attended'].map(s=>`<option ${m.attendance===s?'selected':''}>${s}</option>`).join('')}</select></div>
+        <div class="form-field"><label>Voting Status</label><select name="votingStatus">${['—','Pending','Completed'].map(s=>`<option ${m.votingStatus===s?'selected':''}>${s}</option>`).join('')}</select></div>
+        <div class="form-field full"><label>Pending Action Items</label><textarea name="pendingActions">${escapeHtml(m.pendingActions||'')}</textarea></div>
+      </div>
+      <div class="modal-foot">
+        <div>${id?`<button type="button" class="btn btn-danger btn-sm" onclick="deleteMeeting('${id}'); closeModal();">Delete</button>`:''}</div>
+        <div style="display:flex; gap:8px;"><button type="button" class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary">${id?'Save Changes':'Schedule Meeting'}</button></div>
+      </div>
+    </form>
+  `);
+}
+function saveMeeting(evt, id){
+  evt.preventDefault();
+  const f = evt.target;
+  const m = id ? DATA.meetings.find(x=>x.id===id) : {id: uid('mt')};
+  ['type','committeeName','number','date','time','venue','noticeStatus','agendaStatus','attendance','votingStatus','pendingActions'].forEach(k=>{
+    m[k] = f.elements[k].value;
+  });
+  if(!id) DATA.meetings.push(m);
+  saveAll(); closeModal(); toast(id?'Meeting updated.':'Meeting scheduled.');
+  renderTopbar(); renderSidebar(); renderPage();
+  return false;
+}
+function deleteMeeting(id){
+  if(!confirm('Delete this meeting record?')) return;
+  DATA.meetings = DATA.meetings.filter(m=>m.id!==id);
+  saveAll(); toast('Meeting deleted.');
+  renderTopbar(); renderSidebar(); renderPage();
+}
+function exportMeetingsCsv(type){
+  const rows = DATA.meetings.filter(m=>m.type===type);
+  if(!rows.length){ toast('No records to export.', true); return; }
+  const headers = ['type','committeeName','number','date','time','venue','noticeStatus','agendaStatus','attendance','votingStatus','pendingActions'];
+  const lines = [headers.join(',')];
+  rows.forEach(r=> lines.push(headers.map(h=>`"${String(r[h]||'').replace(/"/g,'""')}"`).join(',')));
+  downloadFile(`${type.toLowerCase()}_meetings_${new Date().toISOString().slice(0,10)}.csv`, lines.join('\n'), 'text/csv');
+}
+
+/* =========================================================================
+   Compliance Calendar
+   ========================================================================= */
+function renderCalendarPage(){
+  const events = [...DATA.complianceEvents].sort((a,b)=>new Date(a.dueDate)-new Date(b.dueDate));
+  return `
+    <div class="page-head">
+      <div><h1>Compliance Calendar</h1><div class="sub">Statutory and governance deadlines, with reminders and completion tracking.</div></div>
+      <div class="page-head-actions"><button class="btn btn-primary" onclick="openCalendarEventForm(null)">+ Add Compliance Event</button></div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Event</th><th>Area</th><th>Due Date</th><th>Reminder</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>
+          ${events.length? events.map(e=>{
+            const d = daysUntil(e.dueDate);
+            const status = e.completed? {l:'Completed',c:'green'} : d<0? {l:'Overdue',c:'red'} : d<=5? {l:'Due Soon',c:'amber'} : {l:'Scheduled',c:'gray'};
+            return `<tr>
+              <td style="font-weight:600;">${escapeHtml(e.title)}</td>
+              <td>${escapeHtml(e.area)}</td>
+              <td>${fmtDate(e.dueDate)}</td>
+              <td>${e.reminderDays} day(s) before</td>
+              <td><span class="pill pill-${status.c}">${status.l}</span></td>
+              <td class="td-actions">
+                ${!e.completed?`<a class="icon-link" title="Mark Complete" onclick="toggleCalendarEvent('${e.id}')">&#10003;</a>`:''}
+                <a class="icon-link" title="Edit" onclick="openCalendarEventForm('${e.id}')">&#9998;</a>
+                <a class="icon-link" title="Delete" onclick="deleteCalendarEvent('${e.id}')">&#128465;</a>
+              </td>
+            </tr>`;
+          }).join('') : `<tr><td colspan="6"><div class="empty-state"><div class="ei">&#128197;</div><div class="et">No compliance events</div></div></td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+function openCalendarEventForm(id){
+  const e = id ? DATA.complianceEvents.find(x=>x.id===id) : {};
+  showModal(`
+    <div class="modal-head"><h3>${id?'Edit':'Add'} Compliance Event</h3><button class="modal-close" onclick="closeModal()">&#10005;</button></div>
+    <form onsubmit="return saveCalendarEvent(event,'${id||''}')">
+      <div class="form-grid">
+        <div class="form-field full"><label>Event Title *</label><input type="text" name="title" required value="${escapeHtml(e.title||'')}"></div>
+        <div class="form-field"><label>Compliance Area</label><select name="area">${DATA.complianceAreas.map(a=>`<option ${e.area===a.name?'selected':''}>${a.name}</option>`).join('')}</select></div>
+        <div class="form-field"><label>Due Date *</label><input type="date" name="dueDate" required value="${e.dueDate||''}"></div>
+        <div class="form-field"><label>Reminder (days before)</label><input type="number" name="reminderDays" min="0" value="${e.reminderDays!==undefined?e.reminderDays:3}"></div>
+        <div class="form-field"><label>Completed</label><input type="checkbox" name="completed" ${e.completed?'checked':''} style="width:18px; height:18px;"></div>
+        <div class="form-field full"><label>Notes</label><textarea name="notes">${escapeHtml(e.notes||'')}</textarea></div>
+      </div>
+      <div class="modal-foot">
+        <div>${id?`<button type="button" class="btn btn-danger btn-sm" onclick="deleteCalendarEvent('${id}'); closeModal();">Delete</button>`:''}</div>
+        <div style="display:flex; gap:8px;"><button type="button" class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary">${id?'Save Changes':'Add Event'}</button></div>
+      </div>
+    </form>
+  `);
+}
+function saveCalendarEvent(evt, id){
+  evt.preventDefault();
+  const f = evt.target;
+  const e = id ? DATA.complianceEvents.find(x=>x.id===id) : {id: uid('ce')};
+  e.title = f.elements.title.value;
+  e.area = f.elements.area.value;
+  e.dueDate = f.elements.dueDate.value;
+  e.reminderDays = Number(f.elements.reminderDays.value);
+  e.completed = f.elements.completed.checked;
+  e.notes = f.elements.notes.value;
+  if(!id) DATA.complianceEvents.push(e);
+  saveAll(); closeModal(); toast(id?'Event updated.':'Event added.');
+  renderTopbar(); renderSidebar(); renderPage();
+  return false;
+}
+function toggleCalendarEvent(id){
+  const e = DATA.complianceEvents.find(x=>x.id===id);
+  e.completed = true; saveAll(); toast('Marked complete.');
+  renderTopbar(); renderSidebar(); renderPage();
+}
+function deleteCalendarEvent(id){
+  if(!confirm('Delete this compliance event?')) return;
+  DATA.complianceEvents = DATA.complianceEvents.filter(e=>e.id!==id);
+  saveAll(); toast('Event deleted.');
+  renderTopbar(); renderSidebar(); renderPage();
+}
+
+/* =========================================================================
+   Reports & Documents
+   ========================================================================= */
+function renderReportsPage(){
+  const reports = [
+    {key:'complianceAreas', label:'Governance Scorecard', desc:'Category-wise compliance scores and pending matters.'},
+    {key:'actionItems', label:'Action Items Report', desc:'All action items with status, priority and ownership.'},
+    {key:'meetings', label:'Board & Committee Meetings', desc:'Full meeting register across board and committees.'},
+    {key:'auditObservations', label:'Audit Observations Report', desc:'Open and closed audit findings with risk ratings.'},
+    {key:'disclosures', label:'Disclosures & Declarations', desc:'Statutory declaration filing and validity status.'},
+    {key:'rpts', label:'Related-Party Transactions Register', desc:'All proposed and approved RPTs.'},
+  ];
+  return `
+    <div class="page-head"><div><h1>Governance Reports</h1><div class="sub">Download CSV exports of any register for offline review or board circulation.</div></div></div>
+    <div class="grid g-3">
+      ${reports.map(r=>`
+        <div class="card">
+          <div class="card-title">${r.label}</div>
+          <div class="card-sub mt8" style="min-height:32px;">${r.desc}</div>
+          <button class="btn btn-ghost btn-sm mt12" onclick="exportGenericCsv('${r.key}')">&#8681; Export CSV</button>
+        </div>`).join('')}
+    </div>
+  `;
+}
+function exportGenericCsv(key){
+  const rows = DATA[key];
+  if(!rows || !rows.length){ toast('No records to export.', true); return; }
+  const headers = Object.keys(rows[0]).filter(k=>k!=='id');
+  const lines = [headers.join(',')];
+  rows.forEach(r=> lines.push(headers.map(h=>`"${String(r[h]===undefined?'':r[h]).replace(/"/g,'""')}"`).join(',')));
+  downloadFile(`${key}_${new Date().toISOString().slice(0,10)}.csv`, lines.join('\n'), 'text/csv');
+}
+
+/* =========================================================================
+   Settings
+   ========================================================================= */
+function renderSettingsPage(){
+  return `
+    <div class="page-head"><div><h1>Settings</h1><div class="sub">Company profile, director details and demo data controls.</div></div></div>
+    <div class="grid g-2">
+      <div class="card">
+        <div class="card-title">Company Profile</div>
+        <form class="mt12" onsubmit="return saveCompanySettings(event)">
+          <div class="form-grid">
+            <div class="form-field full"><label>Company Name</label><input type="text" name="name" value="${escapeHtml(DATA.company.name)}"></div>
+            <div class="form-field full"><label>CIN</label><input type="text" name="cin" value="${escapeHtml(DATA.company.cin)}"></div>
+            <div class="form-field full"><label>Listing Status</label><input type="text" name="listing" value="${escapeHtml(DATA.company.listing)}"></div>
+            <div class="form-field full"><label>Director Name</label><input type="text" name="dname" value="${escapeHtml(DATA.director.name)}"></div>
+            <div class="form-field full"><label>Designation</label><input type="text" name="ddesig" value="${escapeHtml(DATA.director.designation)}"></div>
+          </div>
+          <button class="btn btn-primary mt16" type="submit">Save Profile</button>
+        </form>
+      </div>
+      <div class="card">
+        <div class="card-title">Demo Data</div>
+        <div class="card-sub mt8">All data is stored locally in this browser via localStorage. Nothing is sent to a server.</div>
+        <div class="mt16" style="display:flex; flex-direction:column; gap:10px;">
+          <button class="btn btn-ghost" onclick="importDataPrompt()">&#8593; Import Records (JSON)</button>
+          <button class="btn btn-ghost" onclick="exportAllData()">&#8681; Export All Records (JSON)</button>
+          <button class="btn btn-danger" onclick="resetDemoData()">&#8635; Reset Demo Data</button>
+        </div>
+      </div>
+    </div>
+    <div class="card mt16">
+      <div class="card-title">Statutory & Legal Disclaimer</div>
+      <div class="card-sub mt8">DirectorDesk is a prototype governance management tool built to help independent directors organise compliance information. Statutory deadlines, trading window dates and regulatory requirements shown are configurable illustrative entries and must be independently verified against applicable provisions of the Companies Act, 2013, SEBI LODR Regulations, SEBI Insider Trading Regulations and other applicable law. This application does not constitute legal advice. For production use with confidential board papers, add secure authentication, a server-side database, access controls and a verified regulatory-update feed.</div>
+      <div class="small-muted mt12">Developed by Anil Sharma, former General Manager, Central Bank of India.</div>
+    </div>
+  `;
+}
+function saveCompanySettings(evt){
+  evt.preventDefault();
+  const f = evt.target;
+  DATA.company.name = f.elements.name.value;
+  DATA.company.cin = f.elements.cin.value;
+  DATA.company.listing = f.elements.listing.value;
+  DATA.director.name = f.elements.dname.value;
+  DATA.director.designation = f.elements.ddesig.value;
+  saveAll(); toast('Profile updated.');
+  renderTopbar(); renderSidebar(); renderPage();
+  return false;
+}
+function exportAllData(){
+  downloadFile(`idgos_backup_${new Date().toISOString().slice(0,10)}.json`, JSON.stringify(DATA,null,2), 'application/json');
+}
+function importDataPrompt(){
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = 'application/json';
+  input.onchange = ()=>{
+    const file = input.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      try{
+        const parsed = JSON.parse(reader.result);
+        if(!parsed || typeof parsed!=='object') throw new Error('Invalid file');
+        DATA = Object.assign(sampleDataShape(), parsed);
+        saveAll();
+        toast('Data imported successfully.');
+        renderTopbar(); renderSidebar(); renderPage();
+      }catch(e){ toast('Import failed — invalid JSON file.', true); }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+function sampleDataShape(){ return {company:{},director:{},meetings:[],agendaItems:[],minutes:[],actionItems:[],complianceEvents:[],disclosures:[],auditObservations:[],rpts:[],erm:[],ifc:[],complianceAreas:[]}; }
+function resetDemoData(){
+  if(!confirm('This will replace ALL current records with fresh sample data. Continue?')) return;
+  DATA = sampleData();
+  saveAll();
+  toast('Demo data reset.');
+  renderTopbar(); renderSidebar(); renderPage();
+}
+
+/* =========================================================================
+   Quick Add (topbar "+ Add New")
+   ========================================================================= */
+function openQuickAdd(){
+  const options = [
+    {label:'Action Item', fn:()=>openRecordForm('actionItems', null)},
+    {label:'Board / Committee Meeting', fn:()=>openMeetingForm(null,'Board')},
+    {label:'Agenda Item', fn:()=>openRecordForm('agendaItems', null)},
+    {label:'Compliance Calendar Event', fn:()=>openCalendarEventForm(null)},
+    {label:'Disclosure / Declaration', fn:()=>openRecordForm('disclosures', null)},
+    {label:'Audit Observation', fn:()=>openRecordForm('auditObservations', null)},
+    {label:'Related-Party Transaction', fn:()=>openRecordForm('rpts', null)},
+  ];
+  window.__quickAddOptions = options;
+  showModal(`
+    <div class="modal-head"><h3>Add New Record</h3><button class="modal-close" onclick="closeModal()">&#10005;</button></div>
+    <div style="display:flex; flex-direction:column; gap:8px;">
+      ${options.map((o,i)=>`<button class="btn btn-ghost" style="justify-content:flex-start;" onclick="closeModal(); window.__quickAddOptions[${i}].fn();">${o.label}</button>`).join('')}
+    </div>
+  `);
+}
+
+/* =========================================================================
+   Governance AI Assistant — demo mode (local, rule-based; no external API)
+   ========================================================================= */
+let AI_HISTORY = [
+  {role:'bot', text:"Hello, I'm the Governance AI Assistant, running in demo mode. I can search your records, summarise pending items, and explain general governance requirements using the data already in this workspace.\n\nDemo-mode responses are generated locally from your records and general knowledge — they are not verified legal advice. Try one of the suggestions below, or ask a question."}
+];
+function toggleAI(open){
+  document.getElementById('aiOverlay').classList.toggle('open', open);
+  const drawer = document.getElementById('aiDrawer');
+  if(open){ renderAIDrawer(); drawer.classList.add('open'); }
+  else{ drawer.classList.remove('open'); }
+}
+function renderAIDrawer(){
+  const el = document.getElementById('aiDrawer');
+  el.innerHTML = `
+    <div class="ai-head">
+      <div class="ttl">&#129302; Governance AI Assistant <span class="ai-mode">DEMO MODE</span></div>
+      <button class="modal-close" onclick="toggleAI(false)">&#10005;</button>
+    </div>
+    <div class="ai-msgs" id="aiMsgs">
+      ${AI_HISTORY.map(m=>`<div class="ai-msg ${m.role}">${escapeHtml(m.text)}</div>`).join('')}
+    </div>
+    <div class="ai-suggest">
+      ${['What needs my attention today?','Summarise open audit observations','Any pending RPT approvals?','Overdue disclosures?','Next board meeting?'].map(s=>`<span class="ai-chip" style="cursor:pointer;" onclick="askAI('${s.replace(/'/g,"\\'")}')">${s}</span>`).join('')}
+    </div>
+    <div class="ai-input-row">
+      <input type="text" id="aiInput" placeholder="Ask about your governance records…" onkeydown="if(event.key==='Enter'){ askAI(this.value); this.value=''; }">
+      <button class="btn btn-primary btn-sm" onclick="const i=document.getElementById('aiInput'); askAI(i.value); i.value='';">Send</button>
+    </div>
+  `;
+  const msgs = document.getElementById('aiMsgs');
+  if(msgs) msgs.scrollTop = msgs.scrollHeight;
+}
+function askAI(q){
+  if(!q || !q.trim()) return;
+  AI_HISTORY.push({role:'user', text:q});
+  const reply = generateAIReply(q.trim());
+  AI_HISTORY.push({role:'bot', text:reply});
+  renderAIDrawer();
+}
+function generateAIReply(q){
+  const ql = q.toLowerCase();
+  const overdueActions = DATA.actionItems.filter(a=>a.status!=='Completed' && a.dueDate && daysUntil(a.dueDate)<0);
+  const openAudit = DATA.auditObservations.filter(a=>a.status!=='Closed');
+  const pendingRpt = DATA.rpts.filter(r=>r.status==='Pending Approval'||r.status==='Proposed');
+  const overdueDisc = DATA.disclosures.filter(d=>d.status==='Overdue'||d.status==='Expiring Soon');
+  const upcoming = DATA.meetings.filter(m=>m.date && daysUntil(m.date)>=0).sort((a,b)=>new Date(a.date)-new Date(b.date));
+
+  if(/attention|today|priorit/.test(ql)){
+    const alerts = buildAlerts().slice(0,5);
+    if(!alerts.length) return 'No items currently need your attention — all registers are up to date.';
+    return 'Based on current records, here is what needs attention:\n' + alerts.map(a=>`• [${a.priority.toUpperCase()}] ${a.title}${a.meta? ' — '+a.meta:''}`).join('\n');
+  }
+  if(/audit/.test(ql)){
+    if(!openAudit.length) return 'There are no open audit observations at present.';
+    return `There are ${openAudit.length} open audit observation(s):\n` + openAudit.map(a=>`• ${a.area} (${a.riskRating} risk) — owner: ${a.responsible}, target: ${fmtDate(a.targetDate)}`).join('\n');
+  }
+  if(/rpt|related.party/.test(ql)){
+    if(!pendingRpt.length) return 'No related-party transactions are currently pending approval.';
+    return `${pendingRpt.length} related-party transaction(s) need approval:\n` + pendingRpt.map(r=>`• ${r.party} — ${money(r.value)}, requires ${r.approvalRequired} approval`).join('\n');
+  }
+  if(/disclos|mbp|dir.?8/.test(ql)){
+    if(!overdueDisc.length) return 'All disclosures and declarations are currently up to date.';
+    return `${overdueDisc.length} disclosure(s) need action:\n` + overdueDisc.map(d=>`• ${d.type} — ${d.status}, valid until ${fmtDate(d.validity)}`).join('\n');
+  }
+  if(/meeting|board/.test(ql)){
+    if(!upcoming.length) return 'No upcoming meetings are currently scheduled.';
+    const m = upcoming[0];
+    return `The next meeting is ${m.number} on ${fmtDate(m.date)}${m.time?' at '+m.time:''}, ${m.venue||''}.\nAgenda status: ${m.agendaStatus}. Notice status: ${m.noticeStatus}.\nThere are ${upcoming.length} meeting(s) scheduled in total.`;
+  }
+  if(/action|task/.test(ql)){
+    const open = DATA.actionItems.filter(a=>a.status!=='Completed');
+    return `You have ${open.length} open action item(s), of which ${overdueActions.length} are overdue.` + (overdueActions.length? '\n' + overdueActions.map(a=>`• ${a.title} (due ${fmtDate(a.dueDate)})`).join('\n') : '');
+  }
+  if(/score|governance score|compliance rate/.test(ql)){
+    return `The current overall governance score is ${governanceScore()}/100, based on a simple average across ${DATA.complianceAreas.length} tracked categories. The lowest-scoring category is ${[...DATA.complianceAreas].sort((a,b)=>a.percent-b.percent)[0].name}.`;
+  }
+  if(/trading window/.test(ql)){
+    const ev = DATA.complianceEvents.find(e=>/trading window/i.test(e.title));
+    if(ev) return `${ev.title} — scheduled for ${fmtDate(ev.dueDate)}. This is a configured entry; always confirm against the company's actual trading window communication under the SEBI (Prohibition of Insider Trading) Regulations.`;
+    return 'No trading window event is currently configured in the compliance calendar. You can add one from the Compliance Calendar module.';
+  }
+  if(/hello|hi|hey/.test(ql)){
+    return `Hello ${DATA.director.name.split(' ')[0]}. I can help you search records, summarise pending items, or explain general governance concepts. What would you like to know?`;
+  }
+  return "I can search records already in this workspace (action items, meetings, agendas, disclosures, audit observations, RPTs) and explain general governance concepts. I don't have a live connection to an external AI service in this demo, so for anything beyond your local records, please configure an AI API connection or consult your Company Secretary / legal advisor. Try asking about 'open audit observations', 'pending RPT approvals', or 'what needs my attention today'.";
+}
+
+/* =========================================================================
+   Boot
+   ========================================================================= */
+function init(){
+  renderSidebar();
+  renderTopbar();
+  renderPage();
+}
+init();
+</script>
+</body>
+</html>
