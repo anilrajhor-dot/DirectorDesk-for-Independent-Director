@@ -94,6 +94,14 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .sf-line{font-size:10.5px; color:var(--text-faint); line-height:1.5;}
 .sf-line strong{color:var(--text-dim); font-weight:600;}
 
+#appFooter{
+  text-align:center; font-size:11px; color:var(--text-faint);
+  padding:16px 20px 22px; border-top:1px solid var(--border-soft);
+  max-width:1400px; margin:0 auto; width:100%;
+}
+#appFooter strong{color:var(--text-dim); font-weight:600;}
+@media (max-width:900px){ #appFooter{ padding:14px 16px 20px; } }
+
 .nav-group{margin-bottom:6px;}
 .nav-group-label{
   font-size:10.5px;
@@ -300,6 +308,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
   border-radius:6px; color:var(--text-dim); border:1px solid var(--border);
 }
 .icon-link:hover{color:var(--text); border-color:var(--text-faint);}
+.icon-link.wide{width:auto; padding:0 8px; gap:3px; font-size:11px;}
 .empty-state{
   text-align:center; padding:44px 20px; color:var(--text-faint);
 }
@@ -328,6 +337,20 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
 .form-field textarea{resize:vertical; min-height:64px;}
 .form-field input:focus, .form-field select:focus, .form-field textarea:focus{border-color:var(--blue);}
 .field-hint{font-size:10.8px; color:var(--text-faint);}
+
+.attach-list{display:flex; flex-direction:column; gap:6px; margin-bottom:8px;}
+.attach-chip{
+  display:flex; align-items:center; gap:8px; justify-content:space-between;
+  background:var(--panel); border:1px solid var(--border); border-radius:var(--radius-sm);
+  padding:7px 10px; font-size:12px;
+}
+.attach-chip .an{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;}
+.attach-chip a{color:var(--blue); font-weight:600; white-space:nowrap;}
+.attach-chip .rm{color:var(--red); cursor:pointer; font-weight:700; padding:0 2px;}
+.attach-field input[type=file]{
+  background:var(--panel-2); border:1px dashed var(--border); color:var(--text-dim);
+  border-radius:var(--radius-sm); padding:8px 10px; width:100%; font-size:12px;
+}
 
 /* modal */
 .modal-overlay{
@@ -417,6 +440,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
   <div id="main">
     <header id="topbar"></header>
     <main id="pageContent"></main>
+    <footer id="appFooter">DirectorDesk — developed by <strong>Anil Sharma</strong>, former General Manager, Central Bank of India</footer>
   </div>
 </div>
 
@@ -774,6 +798,7 @@ const MODULES = {
       {key:'priority', label:'Priority', type:'select', options:['High','Medium','Low'], required:true},
       {key:'status', label:'Status', type:'select', options:['Pending','In Progress','Completed','Overdue'], required:true},
       {key:'remarks', label:'Remarks', type:'textarea', full:true},
+      {key:'attachments', label:'Supporting Documents', type:'files', full:true},
     ],
     quickActions:[
       {label:'Mark In Progress', status:'In Progress'},
@@ -802,6 +827,7 @@ const MODULES = {
       {key:'recommendation', label:'Recommendation', type:'textarea', full:true},
       {key:'observations', label:'Director\'s Observations', type:'textarea', full:true},
       {key:'status', label:'Status', type:'select', options:['Pending Review','Reviewed','Clarification Required'], required:true},
+      {key:'attachments', label:'Supporting Documents', type:'files', full:true},
     ],
     quickActions:[{label:'Mark Reviewed', status:'Reviewed'}],
   },
@@ -824,6 +850,7 @@ const MODULES = {
       {key:'dissent', label:'Dissenting Opinion', type:'textarea', full:true},
       {key:'directorObservations', label:'Director\'s Observations', type:'textarea', full:true},
       {key:'followUp', label:'Follow-up Action', type:'text', full:true},
+      {key:'attachments', label:'Supporting Documents', type:'files', full:true},
     ],
   },
   disclosures:{
@@ -843,6 +870,7 @@ const MODULES = {
       {key:'validity', label:'Valid Until', type:'date'},
       {key:'status', label:'Status', type:'select', options:['Filed','Pending','Expiring Soon','Overdue'], required:true},
       {key:'notes', label:'Notes', type:'textarea', full:true},
+      {key:'attachments', label:'Supporting Documents', type:'files', full:true},
     ],
     quickActions:[{label:'File Declaration', status:'Filed'}],
   },
@@ -865,6 +893,7 @@ const MODULES = {
       {key:'targetDate', label:'Target Closure Date', type:'date'},
       {key:'status', label:'Status', type:'select', options:['Open','In Progress','Closed'], required:true},
       {key:'notes', label:'Notes', type:'textarea', full:true},
+      {key:'attachments', label:'Supporting Documents', type:'files', full:true},
     ],
     quickActions:[{label:'Mark Closed', status:'Closed'}],
   },
@@ -888,6 +917,7 @@ const MODULES = {
       {key:'approvalRequired', label:'Approval Required', type:'select', options:['Board','Audit Committee','Shareholders','Not Required']},
       {key:'status', label:'Status', type:'select', options:['Proposed','Pending Approval','Approved','Rejected'], required:true},
       {key:'notes', label:'Supporting Notes', type:'textarea', full:true},
+      {key:'attachments', label:'Supporting Documents', type:'files', full:true},
     ],
     quickActions:[{label:'Approve', status:'Approved'}],
   },
@@ -908,6 +938,7 @@ const MODULES = {
       {key:'mitigation', label:'Mitigation Plan', type:'textarea', full:true},
       {key:'owner', label:'Risk Owner', type:'text', required:true},
       {key:'status', label:'Status', type:'select', options:['Open','Monitoring','Closed'], required:true},
+      {key:'attachments', label:'Supporting Documents', type:'files', full:true},
     ],
   },
   ifc:{
@@ -925,6 +956,7 @@ const MODULES = {
       {key:'testStatus', label:'Test Status', type:'select', options:['Effective','Deficient','Not Tested'], required:true},
       {key:'lastTested', label:'Last Tested', type:'date'},
       {key:'remarks', label:'Remarks', type:'textarea', full:true},
+      {key:'attachments', label:'Supporting Documents', type:'files', full:true},
     ],
   },
 };
@@ -990,6 +1022,7 @@ function renderModuleTable(moduleKey, records){
       html += `<td>${renderCell(r, c)}</td>`;
     });
     html += `<td class="td-actions">
+      ${(r.attachments&&r.attachments.length)? `<a class="icon-link wide" title="${r.attachments.length} attachment(s)" onclick="viewAttachments('${moduleKey}','${r.id}')">&#128206;${r.attachments.length}</a>`:''}
       <a class="icon-link" title="Edit" onclick="openRecordForm('${moduleKey}','${r.id}')">&#9998;</a>
       <a class="icon-link" title="Delete" onclick="deleteRecord('${moduleKey}','${r.id}')">&#128465;</a>
     </td>`;
@@ -1014,10 +1047,12 @@ function renderCell(r, c){
 }
 
 /* ---- Record form (add/edit) ---- */
+let FORM_ATTACHMENTS = [];
 function openRecordForm(moduleKey, id){
   const mod = MODULES[moduleKey];
   const record = id ? (DATA[mod.dataKey].find(r=>r.id===id) || {}) : {};
   const isEdit = !!id;
+  FORM_ATTACHMENTS = (record.attachments || []).slice();
   const fieldsHtml = mod.fields.map(f=>{
     const val = record[f.key]!==undefined ? record[f.key] : '';
     return `<div class="form-field ${f.full?'full':''}">
@@ -1054,7 +1089,52 @@ function renderFieldInput(f, val){
   if(f.type==='checkbox'){
     return `<input type="checkbox" name="${name}" ${val?'checked':''} style="width:18px; height:18px;">`;
   }
+  if(f.type==='files'){
+    return `<div class="attach-field">
+      <div class="attach-list" id="attachList">${renderAttachList()}</div>
+      <input type="file" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" onchange="handleAttachInput(this)">
+      <div class="field-hint">Photos, scans, PDFs or Office files — up to 2MB each. Stored in this browser only.</div>
+    </div>`;
+  }
   return `<input type="${f.type||'text'}" name="${name}" value="${escapeHtml(val)}" ${f.required?'required':''}>`;
+}
+function renderAttachList(){
+  if(!FORM_ATTACHMENTS.length) return `<div class="field-hint">No documents attached yet.</div>`;
+  return FORM_ATTACHMENTS.map((a,i)=>`
+    <div class="attach-chip">
+      <span class="an">&#128206; ${escapeHtml(a.name)}</span>
+      <a href="${a.dataUrl}" target="_blank" rel="noopener" download="${escapeHtml(a.name)}">View</a>
+      <span class="rm" onclick="removeAttachment(${i})" title="Remove">&#10005;</span>
+    </div>`).join('');
+}
+function handleAttachInput(inputEl){
+  const files = Array.from(inputEl.files || []);
+  if(!files.length) return;
+  let remaining = files.length;
+  files.forEach(file=>{
+    if(file.size > 2*1024*1024){
+      toast(`"${file.name}" exceeds the 2MB limit and was not attached.`, true);
+      remaining--; if(remaining===0) inputEl.value='';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      FORM_ATTACHMENTS.push({name:file.name, dataUrl:reader.result});
+      const list = document.getElementById('attachList');
+      if(list) list.innerHTML = renderAttachList();
+      remaining--; if(remaining===0) inputEl.value='';
+    };
+    reader.onerror = ()=>{
+      toast(`Could not read "${file.name}".`, true);
+      remaining--; if(remaining===0) inputEl.value='';
+    };
+    reader.readAsDataURL(file);
+  });
+}
+function removeAttachment(idx){
+  FORM_ATTACHMENTS.splice(idx,1);
+  const list = document.getElementById('attachList');
+  if(list) list.innerHTML = renderAttachList();
 }
 function submitRecordForm(evt, moduleKey, id){
   evt.preventDefault();
@@ -1062,16 +1142,44 @@ function submitRecordForm(evt, moduleKey, id){
   const form = evt.target;
   const record = id ? (DATA[mod.dataKey].find(r=>r.id===id)) : { id: uid(moduleKey.slice(0,2)) };
   mod.fields.forEach(f=>{
+    if(f.type==='files') return;
     const el = form.elements[f.key];
     if(!el) return;
     record[f.key] = f.type==='checkbox' ? el.checked : el.value;
   });
+  record.attachments = FORM_ATTACHMENTS.slice();
   if(!id){ DATA[mod.dataKey].push(record); }
   saveAll();
   closeModal();
   toast(id? 'Record updated.' : 'Record created.');
   renderTopbar(); renderSidebar(); renderPage();
   return false;
+}
+function viewAttachments(moduleKey, id){
+  const mod = MODULES[moduleKey];
+  const r = DATA[mod.dataKey].find(x=>x.id===id);
+  showModal(renderAttachmentsModal((r && r.attachments) || []));
+}
+function viewMeetingAttachments(id){
+  const m = DATA.meetings.find(x=>x.id===id);
+  showModal(renderAttachmentsModal((m && m.attachments) || []));
+}
+function viewEventAttachments(id){
+  const e = DATA.complianceEvents.find(x=>x.id===id);
+  showModal(renderAttachmentsModal((e && e.attachments) || []));
+}
+function renderAttachmentsModal(atts){
+  return `
+    <div class="modal-head"><h3>Attachments</h3><button class="modal-close" onclick="closeModal()">&#10005;</button></div>
+    <div style="display:flex; flex-direction:column; gap:8px;">
+      ${atts.length ? atts.map(a=>`
+        <div class="attach-chip">
+          <span class="an">&#128206; ${escapeHtml(a.name)}</span>
+          <a href="${a.dataUrl}" target="_blank" rel="noopener" download="${escapeHtml(a.name)}">View / Download</a>
+        </div>`).join('') : `<div class="field-hint">No documents attached to this record.</div>`}
+    </div>
+    <div class="modal-foot"><div></div><button class="btn btn-primary" onclick="closeModal()">Close</button></div>
+  `;
 }
 function deleteRecord(moduleKey, id){
   if(!confirm('Delete this record? This cannot be undone.')) return;
@@ -1339,6 +1447,7 @@ function renderMeetingCard(m){
       <button class="btn btn-sm btn-ghost" onclick="goTo('agenda')">View Agenda</button>
       <button class="btn btn-sm btn-ghost" onclick="goTo('agenda')">Review Papers</button>
       <button class="btn btn-sm btn-ghost" onclick="openMeetingForm('${m.id}')">Edit Meeting</button>
+      ${(m.attachments&&m.attachments.length)? `<button class="btn btn-sm btn-ghost" onclick="viewMeetingAttachments('${m.id}')">&#128206; ${m.attachments.length}</button>`:''}
     </div>
   </div>`;
 }
@@ -1437,6 +1546,7 @@ function renderMeetingsPage(type){
 }
 function openMeetingForm(id, defaultType){
   const m = id ? DATA.meetings.find(x=>x.id===id) : {type:defaultType||'Board'};
+  FORM_ATTACHMENTS = (m.attachments || []).slice();
   showModal(`
     <div class="modal-head"><h3>${id?'Edit':'Schedule'} Meeting</h3><button class="modal-close" onclick="closeModal()">&#10005;</button></div>
     <form onsubmit="return saveMeeting(event,'${id||''}')">
@@ -1455,6 +1565,13 @@ function openMeetingForm(id, defaultType){
         <div class="form-field"><label>Attendance</label><select name="attendance">${['Confirmed','Tentative','Not Confirmed','Attended'].map(s=>`<option ${m.attendance===s?'selected':''}>${s}</option>`).join('')}</select></div>
         <div class="form-field"><label>Voting Status</label><select name="votingStatus">${['—','Pending','Completed'].map(s=>`<option ${m.votingStatus===s?'selected':''}>${s}</option>`).join('')}</select></div>
         <div class="form-field full"><label>Pending Action Items</label><textarea name="pendingActions">${escapeHtml(m.pendingActions||'')}</textarea></div>
+        <div class="form-field full"><label>Notice / Agenda / Minutes Documents</label>
+          <div class="attach-field">
+            <div class="attach-list" id="attachList">${renderAttachList()}</div>
+            <input type="file" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" onchange="handleAttachInput(this)">
+            <div class="field-hint">Photos, scans, PDFs or Office files — up to 2MB each. Stored in this browser only.</div>
+          </div>
+        </div>
       </div>
       <div class="modal-foot">
         <div>${id?`<button type="button" class="btn btn-danger btn-sm" onclick="deleteMeeting('${id}'); closeModal();">Delete</button>`:''}</div>
@@ -1470,6 +1587,7 @@ function saveMeeting(evt, id){
   ['type','committeeName','number','date','time','venue','noticeStatus','agendaStatus','attendance','votingStatus','pendingActions'].forEach(k=>{
     m[k] = f.elements[k].value;
   });
+  m.attachments = FORM_ATTACHMENTS.slice();
   if(!id) DATA.meetings.push(m);
   saveAll(); closeModal(); toast(id?'Meeting updated.':'Meeting scheduled.');
   renderTopbar(); renderSidebar(); renderPage();
@@ -1515,6 +1633,7 @@ function renderCalendarPage(){
               <td><span class="pill pill-${status.c}">${status.l}</span></td>
               <td class="td-actions">
                 ${!e.completed?`<a class="icon-link" title="Mark Complete" onclick="toggleCalendarEvent('${e.id}')">&#10003;</a>`:''}
+                ${(e.attachments&&e.attachments.length)? `<a class="icon-link wide" title="${e.attachments.length} attachment(s)" onclick="viewEventAttachments('${e.id}')">&#128206;${e.attachments.length}</a>`:''}
                 <a class="icon-link" title="Edit" onclick="openCalendarEventForm('${e.id}')">&#9998;</a>
                 <a class="icon-link" title="Delete" onclick="deleteCalendarEvent('${e.id}')">&#128465;</a>
               </td>
@@ -1527,6 +1646,7 @@ function renderCalendarPage(){
 }
 function openCalendarEventForm(id){
   const e = id ? DATA.complianceEvents.find(x=>x.id===id) : {};
+  FORM_ATTACHMENTS = (e.attachments || []).slice();
   showModal(`
     <div class="modal-head"><h3>${id?'Edit':'Add'} Compliance Event</h3><button class="modal-close" onclick="closeModal()">&#10005;</button></div>
     <form onsubmit="return saveCalendarEvent(event,'${id||''}')">
@@ -1537,6 +1657,13 @@ function openCalendarEventForm(id){
         <div class="form-field"><label>Reminder (days before)</label><input type="number" name="reminderDays" min="0" value="${e.reminderDays!==undefined?e.reminderDays:3}"></div>
         <div class="form-field"><label>Completed</label><input type="checkbox" name="completed" ${e.completed?'checked':''} style="width:18px; height:18px;"></div>
         <div class="form-field full"><label>Notes</label><textarea name="notes">${escapeHtml(e.notes||'')}</textarea></div>
+        <div class="form-field full"><label>Supporting Documents</label>
+          <div class="attach-field">
+            <div class="attach-list" id="attachList">${renderAttachList()}</div>
+            <input type="file" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" onchange="handleAttachInput(this)">
+            <div class="field-hint">Photos, scans, PDFs or Office files — up to 2MB each. Stored in this browser only.</div>
+          </div>
+        </div>
       </div>
       <div class="modal-foot">
         <div>${id?`<button type="button" class="btn btn-danger btn-sm" onclick="deleteCalendarEvent('${id}'); closeModal();">Delete</button>`:''}</div>
@@ -1555,6 +1682,7 @@ function saveCalendarEvent(evt, id){
   e.reminderDays = Number(f.elements.reminderDays.value);
   e.completed = f.elements.completed.checked;
   e.notes = f.elements.notes.value;
+  e.attachments = FORM_ATTACHMENTS.slice();
   if(!id) DATA.complianceEvents.push(e);
   saveAll(); closeModal(); toast(id?'Event updated.':'Event added.');
   renderTopbar(); renderSidebar(); renderPage();
