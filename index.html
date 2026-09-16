@@ -588,6 +588,35 @@ function sampleData(){
       { id:'erm', name:'Enterprise Risk Management', percent:80, status:'Attention', pending:'Cyber risk mitigation plan in progress', deadline: addDays(30) },
       { id:'ifcArea', name:'Internal Financial Controls', percent:75, status:'Attention', pending:'2 deficient controls under remediation', deadline: addDays(25) },
     ],
+    irChecklist: [
+      { id:'rr1', category:'Role & Function (Schedule IV, Companies Act 2013)', item:'Bring independent judgment to Board deliberations on strategy, performance, risk management, resources, key appointments and standards of conduct.', status:'Yes', remarks:'Actively raise independent views at every Board meeting.' },
+      { id:'rr2', category:'Role & Function (Schedule IV, Companies Act 2013)', item:'Bring an objective view to the evaluation of Board and management performance.', status:'Yes', remarks:'' },
+      { id:'rr3', category:'Role & Function (Schedule IV, Companies Act 2013)', item:'Scrutinise management performance against agreed goals/objectives and monitor performance reporting.', status:'Partial', remarks:'Reviewed at Board level; not yet tracking a dedicated management scorecard.' },
+      { id:'rr4', category:'Role & Function (Schedule IV, Companies Act 2013)', item:'Satisfy independence of judgment, particularly on related-party transactions.', status:'Yes', remarks:'' },
+      { id:'rr5', category:'Role & Function (Schedule IV, Companies Act 2013)', item:'Safeguard the interests of all stakeholders, particularly minority shareholders.', status:'Yes', remarks:'' },
+      { id:'rr6', category:'Role & Function (Schedule IV, Companies Act 2013)', item:'Balance the conflicting interests of stakeholders.', status:'Not Reviewed', remarks:'' },
+      { id:'rr7', category:'Role & Function (Schedule IV, Companies Act 2013)', item:'Determine appropriate levels of remuneration of executive directors, KMP and senior management.', status:'Yes', remarks:'Participated in NRC remuneration policy review.' },
+      { id:'rr8', category:'Role & Function (Schedule IV, Companies Act 2013)', item:'Moderate and arbitrate in the interest of the company as a whole in situations of conflict between management and shareholder interest.', status:'Not Reviewed', remarks:'' },
+      { id:'rr9', category:'Duties of Independent Directors', item:'Undertake appropriate induction and regularly update/refresh skills, knowledge and familiarity with the company.', status:'Partial', remarks:'Initial induction completed; annual refresher pending.' },
+      { id:'rr10', category:'Duties of Independent Directors', item:'Seek appropriate clarification/amplification of information before approving proposals; insist on adequate information.', status:'Yes', remarks:'' },
+      { id:'rr11', category:'Duties of Independent Directors', item:'Strive to attend all Board and applicable committee meetings and General Meetings.', status:'Yes', remarks:'Attended all meetings in FY26 to date.' },
+      { id:'rr12', category:'Duties of Independent Directors', item:'Where interested in an agenda item, not participate in discussion unless specifically invited by the chairman.', status:'Not Reviewed', remarks:'' },
+      { id:'rr13', category:'Duties of Independent Directors', item:'Keep well informed about the company and the external environment in which it operates.', status:'Yes', remarks:'' },
+      { id:'rr14', category:'Duties of Independent Directors', item:'Not unfairly obstruct the functioning of an otherwise proper Board or committee.', status:'Yes', remarks:'' },
+      { id:'rr15', category:'Duties of Independent Directors', item:'Pay sufficient attention and ensure adequate deliberation before approving related-party transactions.', status:'Partial', remarks:'Standard RPT board-note template still being finalised with Company Secretary.' },
+      { id:'rr16', category:'Duties of Independent Directors', item:'Ascertain and ensure the company has an adequate vigil mechanism / whistle-blower policy, with no employee denied access to the Audit Committee.', status:'Yes', remarks:'' },
+      { id:'rr17', category:'Duties of Independent Directors', item:'Report concerns about unethical behaviour, actual or suspected fraud, or violation of the company\'s code of conduct/ethics policy.', status:'Not Reviewed', remarks:'' },
+      { id:'rr18', category:'Duties of Independent Directors', item:'Act within authority and assist in protecting the legitimate interests of the company, shareholders and employees.', status:'Yes', remarks:'' },
+      { id:'rr19', category:'Duties of Independent Directors', item:'Not disclose confidential information unless approved by the Board or required by law.', status:'Yes', remarks:'' },
+      { id:'rr20', category:'SEBI LODR & Statutory Compliance', item:'File annual disclosure of directorships/interests (MBP-1) and declaration of independence under Section 149(7).', status:'No', remarks:'MBP-1 currently overdue — see Disclosures module.' },
+      { id:'rr21', category:'SEBI LODR & Statutory Compliance', item:'File DIR-8 non-disqualification declaration and DIR-3 KYC as applicable.', status:'Partial', remarks:'DIR-8 expiring soon; DIR-3 KYC pending for this cycle.' },
+      { id:'rr22', category:'SEBI LODR & Statutory Compliance', item:'Comply with the insider trading code — observe trading window closures and pre-clearance requirements.', status:'Yes', remarks:'' },
+      { id:'rr23', category:'SEBI LODR & Statutory Compliance', item:'Complete mandatory Independent Directors\' Databank registration and proficiency self-assessment/exam, as applicable.', status:'Not Reviewed', remarks:'' },
+      { id:'rr24', category:'SEBI LODR & Statutory Compliance', item:'Participate in the annual Board evaluation and performance review process.', status:'Not Reviewed', remarks:'Evaluation cycle due next quarter.' },
+      { id:'rr25', category:'SEBI LODR & Statutory Compliance', item:'Adhere to maximum permissible directorship and committee membership limits under SEBI LODR.', status:'Yes', remarks:'' },
+      { id:'rr26', category:'SEBI LODR & Statutory Compliance', item:'Attend familiarisation programmes on the company, its business model, and director roles/responsibilities.', status:'Yes', remarks:'' },
+    ],
+    meetingIntel: [],
   };
 }
 function addDays(n){ const d = new Date(); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); }
@@ -597,7 +626,14 @@ let DATA = loadData();
 function loadData(){
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
-    if(raw) return JSON.parse(raw);
+    if(raw){
+      const parsed = JSON.parse(raw);
+      // Migration safety: fill in any newly introduced modules missing from older saved data.
+      const defaults = sampleDataShape();
+      Object.keys(defaults).forEach(k=>{ if(parsed[k]===undefined) parsed[k] = defaults[k]; });
+      if(!parsed.irChecklist || !parsed.irChecklist.length){ parsed.irChecklist = sampleData().irChecklist; }
+      return parsed;
+    }
   }catch(e){ console.warn('Failed to load saved data, using sample data.', e); }
   const d = sampleData();
   persist(d);
@@ -636,6 +672,10 @@ const NAV = [
     { id:'committeeMeetings', label:'Committee Meetings', icon:'&#128101;' },
     { id:'agenda', label:'Agenda Review', icon:'&#128196;' },
     { id:'minutes', label:'Minutes & Voting Records', icon:'&#128221;' },
+  ]},
+  { group:'Self-Assessment & AI Tools', items:[
+    { id:'responsibilities', label:'Roles & Responsibilities', icon:'&#9989;' },
+    { id:'meetingIntel', label:'Agenda–Minutes Tracker', icon:'&#129504;' },
   ]},
   { group:'Fiduciary & Statutory', items:[
     { id:'disclosures', label:'Disclosures & Declarations', icon:'&#9888;' },
@@ -689,6 +729,8 @@ function navBadge(id){
   if(id==='actions') return countOverdueActions() || '';
   if(id==='disclosures') return DATA.disclosures.filter(d=>d.status==='Overdue').length || '';
   if(id==='audit') return DATA.auditObservations.filter(a=>a.status!=='Closed' && a.riskRating==='High').length || '';
+  if(id==='responsibilities') return DATA.irChecklist.filter(r=>r.status==='No' || r.status==='Not Reviewed').length || '';
+  if(id==='meetingIntel') return DATA.meetingIntel.reduce((n,mi)=> n + mi.points.filter(p=>p.status==='Not Found').length, 0) || '';
   return '';
 }
 function countOverdueActions(){
@@ -760,6 +802,8 @@ function renderPage(){
     case 'committeeMeetings': el.innerHTML = renderMeetingsPage('Committee'); break;
     case 'agenda': el.innerHTML = renderModulePage('agendaItems'); break;
     case 'minutes': el.innerHTML = renderModulePage('minutes'); break;
+    case 'responsibilities': el.innerHTML = renderResponsibilitiesPage(); break;
+    case 'meetingIntel': el.innerHTML = renderMeetingIntelPage(); break;
     case 'disclosures': el.innerHTML = renderModulePage('disclosures'); break;
     case 'audit': el.innerHTML = renderModulePage('auditObservations'); break;
     case 'rpt': el.innerHTML = renderModulePage('rpts'); break;
@@ -1272,6 +1316,19 @@ function buildAlerts(){
     alerts.push({priority: r.status==='Pending Approval'?'medium':'low', title:`RPT: ${r.party}`, desc:`${r.nature||'Related-party transaction'} — ${money(r.value)}`,
       meta:`Approval required: ${r.approvalRequired}`, actions:[{label:'Review', fn:()=>openRecordForm('rpts', r.id)}], goto:'rpt'});
   });
+  // Responsibilities marked "No"
+  DATA.irChecklist.filter(r=>r.status==='No').forEach(r=>{
+    alerts.push({priority:'medium', title:`Responsibility not met: ${r.item.length>70? r.item.slice(0,67)+'…':r.item}`, desc:'Flagged on your Roles & Responsibilities checklist.',
+      meta: r.remarks||'', actions:[{label:'Review', fn:()=>goTo('responsibilities')}], goto:'responsibilities'});
+  });
+  // Agenda points not found in minutes
+  DATA.meetingIntel.forEach(mi=>{
+    const nf = mi.points.filter(p=>p.status==='Not Found').length;
+    if(nf>0){
+      alerts.push({priority:'medium', title:`${mi.meetingRef}: ${nf} agenda point(s) not found in minutes`, desc:'Coverage check flagged possible gaps.',
+        meta:`Checked ${fmtDate(mi.lastChecked)}`, actions:[{label:'Review', fn:()=>{ MI_SELECTED_MEETING=mi.meetingRef; goTo('meetingIntel'); }}], goto:'meetingIntel'});
+    }
+  });
   // Incomplete action items (not overdue, general)
   const priorityOrder = {high:0, medium:1, low:2};
   alerts.sort((a,b)=>priorityOrder[a.priority]-priorityOrder[b.priority]);
@@ -1386,6 +1443,8 @@ function renderDashboard(){
           ${quickCard('&#9888;','Disclosures', DATA.disclosures.filter(d=>d.status!=='Filed').length+' pending', 'disclosures')}
           ${quickCard('&#128176;','Audit Oversight', DATA.auditObservations.filter(a=>a.status!=='Closed').length+' open', 'audit')}
           ${quickCard('&#128260;','RPT Register', DATA.rpts.length+' transactions', 'rpt')}
+          ${quickCard('&#9989;','My Responsibilities', irScore()+'/100 score', 'responsibilities')}
+          ${quickCard('&#129504;','Agenda–Minutes Tracker', DATA.meetingIntel.length+' meeting(s) checked', 'meetingIntel')}
         </div>
       </div>
     </div>
@@ -1701,6 +1760,366 @@ function deleteCalendarEvent(id){
 }
 
 /* =========================================================================
+   Roles & Responsibilities Checklist + AI Self-Assessment (local, rule-based)
+   ========================================================================= */
+const IR_STATUS_COLOR = {Yes:'green', Partial:'amber', No:'red', 'Not Reviewed':'gray', 'Not Applicable':'gray'};
+function irScore(){
+  const list = DATA.irChecklist;
+  if(!list.length) return 0;
+  const points = list.reduce((s,r)=>{
+    if(r.status==='Yes') return s+1;
+    if(r.status==='Partial') return s+0.5;
+    if(r.status==='Not Applicable') return s+1; // excluded from denominator below
+    return s;
+  },0);
+  const denom = list.filter(r=>r.status!=='Not Applicable').length || 1;
+  const adjPoints = list.reduce((s,r)=>{
+    if(r.status==='Yes') return s+1;
+    if(r.status==='Partial') return s+0.5;
+    return s;
+  },0);
+  return Math.round((adjPoints/denom)*100);
+}
+function renderResponsibilitiesPage(){
+  const list = DATA.irChecklist;
+  const score = irScore();
+  const cats = [...new Set(list.map(r=>r.category))];
+  const counts = {Yes:0, Partial:0, No:0, 'Not Reviewed':0, 'Not Applicable':0};
+  list.forEach(r=> counts[r.status] = (counts[r.status]||0)+1);
+  return `
+    <div class="page-head">
+      <div><h1>Roles & Responsibilities</h1><div class="sub">Self-assessment checklist against Schedule IV (Companies Act, 2013) and SEBI LODR obligations for independent directors.</div></div>
+      <div class="page-head-actions">
+        <button class="btn btn-ghost" onclick="exportResponsibilitiesCsv()">&#8681; Export CSV</button>
+        <button class="btn btn-primary" onclick="runResponsibilityAssessment()">&#129302; Run AI Self-Assessment</button>
+      </div>
+    </div>
+    <div class="disclaimer-strip">
+      <span>&#9888;</span>
+      <span>This checklist reflects commonly cited obligations under Schedule IV of the Companies Act, 2013 and SEBI LODR Regulations. It is a self-review aid, not a certified compliance audit — verify current statutory requirements independently. The "AI Self-Assessment" is a local, rule-based summary of what you've marked below, not an independent verification of your actual conduct.</span>
+    </div>
+    <div class="card" style="padding:20px; margin-bottom:20px;">
+      <div class="flex-between" style="flex-wrap:wrap; gap:16px;">
+        <div>
+          <div class="small-muted">Self-Assessed Fulfilment Score</div>
+          <div style="font-size:34px; font-weight:800; color:${score>=85?'var(--green)':score>=60?'var(--amber)':'var(--red)'};">${score}<span style="font-size:15px; color:var(--text-faint);">/100</span></div>
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <span class="pill pill-green">${counts.Yes||0} Fulfilled</span>
+          <span class="pill pill-amber">${counts.Partial||0} Partial</span>
+          <span class="pill pill-red">${counts.No||0} Not Met</span>
+          <span class="pill pill-gray">${counts['Not Reviewed']||0} Not Reviewed</span>
+        </div>
+      </div>
+      <div class="progress-track mt12"><div class="progress-fill" style="width:${score}%; background:${score>=85?'var(--green)':score>=60?'var(--amber)':'var(--red)'};"></div></div>
+    </div>
+    ${cats.map(cat=>`
+      <div class="section">
+        <div class="section-head"><h2>${escapeHtml(cat)}</h2></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th style="width:44%;">Responsibility</th><th>Status</th><th>Remarks / Evidence</th><th>Actions</th></tr></thead>
+            <tbody>
+              ${list.filter(r=>r.category===cat).map(r=>`
+                <tr>
+                  <td>${escapeHtml(r.item)}</td>
+                  <td style="width:150px;">
+                    <select onchange="updateResponsibility('${r.id}','status',this.value)">
+                      ${['Yes','Partial','No','Not Reviewed','Not Applicable'].map(s=>`<option value="${s}" ${r.status===s?'selected':''}>${s}</option>`).join('')}
+                    </select>
+                  </td>
+                  <td style="min-width:220px;"><input type="text" value="${escapeHtml(r.remarks||'')}" placeholder="Add remarks or evidence…" onchange="updateResponsibility('${r.id}','remarks',this.value)" style="width:100%; background:var(--panel-2); border:1px solid var(--border); color:var(--text); border-radius:6px; padding:6px 8px;"></td>
+                  <td><a class="icon-link" title="Remove" onclick="deleteResponsibility('${r.id}')">&#128465;</a></td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>`).join('')}
+    <button class="btn btn-ghost" onclick="openAddResponsibility()">+ Add Custom Responsibility</button>
+  `;
+}
+function updateResponsibility(id, field, value){
+  const r = DATA.irChecklist.find(x=>x.id===id);
+  if(!r) return;
+  r[field] = value;
+  saveAll();
+  renderTopbar(); renderSidebar();
+  // Re-render just the summary/score area without losing focus on other inputs unnecessarily:
+  renderPage();
+}
+function deleteResponsibility(id){
+  if(!confirm('Remove this responsibility item from your checklist?')) return;
+  DATA.irChecklist = DATA.irChecklist.filter(r=>r.id!==id);
+  saveAll(); toast('Item removed.');
+  renderTopbar(); renderSidebar(); renderPage();
+}
+function openAddResponsibility(){
+  showModal(`
+    <div class="modal-head"><h3>Add Custom Responsibility</h3><button class="modal-close" onclick="closeModal()">&#10005;</button></div>
+    <form onsubmit="return saveNewResponsibility(event)">
+      <div class="form-grid">
+        <div class="form-field full"><label>Category</label><input type="text" name="category" required placeholder="e.g. Company-Specific Obligation"></div>
+        <div class="form-field full"><label>Responsibility / Obligation *</label><textarea name="item" required></textarea></div>
+        <div class="form-field"><label>Status</label><select name="status">${['Not Reviewed','Yes','Partial','No','Not Applicable'].map(s=>`<option>${s}</option>`).join('')}</select></div>
+        <div class="form-field full"><label>Remarks</label><input type="text" name="remarks"></div>
+      </div>
+      <div class="modal-foot"><div></div><div style="display:flex; gap:8px;"><button type="button" class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary">Add</button></div></div>
+    </form>
+  `);
+}
+function saveNewResponsibility(evt){
+  evt.preventDefault();
+  const f = evt.target;
+  DATA.irChecklist.push({ id: uid('rr'), category: f.elements.category.value, item: f.elements.item.value, status: f.elements.status.value, remarks: f.elements.remarks.value });
+  saveAll(); closeModal(); toast('Responsibility added.');
+  renderTopbar(); renderSidebar(); renderPage();
+  return false;
+}
+function exportResponsibilitiesCsv(){
+  const rows = DATA.irChecklist;
+  if(!rows.length){ toast('No records to export.', true); return; }
+  const headers = ['category','item','status','remarks'];
+  const lines = [headers.join(',')];
+  rows.forEach(r=> lines.push(headers.map(h=>`"${String(r[h]||'').replace(/"/g,'""')}"`).join(',')));
+  downloadFile(`ir_responsibilities_${new Date().toISOString().slice(0,10)}.csv`, lines.join('\n'), 'text/csv');
+}
+function runResponsibilityAssessment(){
+  const list = DATA.irChecklist;
+  const score = irScore();
+  const gaps = list.filter(r=>r.status==='No');
+  const partial = list.filter(r=>r.status==='Partial');
+  const unreviewed = list.filter(r=>r.status==='Not Reviewed');
+  const strengths = list.filter(r=>r.status==='Yes');
+  const byCat = {};
+  list.forEach(r=>{ byCat[r.category] = byCat[r.category]||{Yes:0,total:0}; byCat[r.category].total++; if(r.status==='Yes') byCat[r.category].Yes++; });
+  const weakestCat = Object.entries(byCat).map(([c,v])=>({c, pct: Math.round((v.Yes/v.total)*100)})).sort((a,b)=>a.pct-b.pct)[0];
+
+  let verdict, verdictColor;
+  if(score>=90){ verdict='Strong — you are meeting the great majority of standard obligations.'; verdictColor='var(--green)'; }
+  else if(score>=70){ verdict='Reasonable, with specific gaps worth closing.'; verdictColor='var(--amber)'; }
+  else{ verdict='Meaningful gaps — several obligations need attention soon.'; verdictColor='var(--red)'; }
+
+  showModal(`
+    <div class="modal-head"><h3>&#129302; AI Self-Assessment</h3><button class="modal-close" onclick="closeModal()">&#10005;</button></div>
+    <div class="small-muted mb8" style="margin-bottom:12px;">Generated locally from your checklist entries — a rule-based summary, not an independent audit.</div>
+    <div class="card" style="padding:14px; margin-bottom:14px;">
+      <div class="flex-between">
+        <div><div class="small-muted">Overall Score</div><div style="font-size:26px; font-weight:800; color:${verdictColor};">${score}/100</div></div>
+        <div style="max-width:60%; text-align:right; font-size:12.5px; color:var(--text-dim);">${verdict}</div>
+      </div>
+    </div>
+    ${gaps.length? `<div class="mt12"><strong style="font-size:12.5px; color:var(--red);">Not Met (${gaps.length}) — address first:</strong>
+      <ul style="margin:8px 0 0 18px; font-size:12.5px; color:var(--text-dim); line-height:1.7;">
+        ${gaps.map(g=>`<li>${escapeHtml(g.item)}${g.remarks?` <span class="small-muted">— ${escapeHtml(g.remarks)}</span>`:''}</li>`).join('')}
+      </ul></div>` : ''}
+    ${partial.length? `<div class="mt12"><strong style="font-size:12.5px; color:var(--amber);">Partially Met (${partial.length}) — worth strengthening:</strong>
+      <ul style="margin:8px 0 0 18px; font-size:12.5px; color:var(--text-dim); line-height:1.7;">
+        ${partial.map(g=>`<li>${escapeHtml(g.item)}${g.remarks?` <span class="small-muted">— ${escapeHtml(g.remarks)}</span>`:''}</li>`).join('')}
+      </ul></div>` : ''}
+    ${unreviewed.length? `<div class="mt12"><strong style="font-size:12.5px; color:var(--text-dim);">Not Yet Reviewed (${unreviewed.length}):</strong>
+      <div class="small-muted mt8">${unreviewed.map(u=>escapeHtml(u.item)).join(' · ')}</div></div>` : ''}
+    ${weakestCat? `<div class="mt12 small-muted">Weakest category: <strong style="color:var(--text-dim);">${escapeHtml(weakestCat.c)}</strong> (${weakestCat.pct}% fulfilled). Consider prioritising this area at your next review.</div>` : ''}
+    <div class="mt12 small-muted">Strengths: ${strengths.length} of ${list.length} responsibilities marked as fulfilled.</div>
+    <div class="modal-foot"><div></div><button class="btn btn-primary" onclick="closeModal()">Close</button></div>
+  `);
+}
+
+/* =========================================================================
+   Agenda ↔ Minutes Tracker (local, keyword-matching "AI" — not true NLP)
+   ========================================================================= */
+const STOPWORDS = new Set(['the','and','of','to','in','a','an','for','on','with','is','are','was','were','be','been','by','as','that','this','it','at','from','or','will','shall','not','no','yes','into','their','its','has','have','had','which','who','whom','these','those','also','any','all','may','can','such','under','per','than','then','if','so','they','them','he','she','we','you','our']);
+function extractKeywords(text){
+  return (text||'').toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(w=>w.length>3 && !STOPWORDS.has(w));
+}
+function pointCoverageRatio(pointText, minutesText){
+  const kws = Array.from(new Set(extractKeywords(pointText)));
+  if(!kws.length) return 0;
+  const minLower = (minutesText||'').toLowerCase();
+  const matched = kws.filter(k=>minLower.includes(k));
+  return matched.length/kws.length;
+}
+function extractPointsFromText(text){
+  if(!text || !text.trim()) return [];
+  let lines = text.split(/\n+/).map(l=>l.trim()).filter(Boolean);
+  if(lines.length<=2){
+    lines = text.split(/(?=\b\d{1,2}[\.\)]\s)/).map(l=>l.trim()).filter(Boolean);
+  }
+  lines = lines.map(l=> l.replace(/^\s*(item\s*)?\d{1,2}[\.\)]\s*/i,'').replace(/^[-•*]\s*/,'').trim());
+  lines = lines.filter(l=> l.length>8);
+  return lines;
+}
+function currentMeetingIntel(meetingRef){
+  return DATA.meetingIntel.find(mi=>mi.meetingRef===meetingRef);
+}
+function ensureMeetingIntel(meetingRef){
+  let mi = currentMeetingIntel(meetingRef);
+  if(!mi){ mi = {id: uid('mi'), meetingRef, points:[], minutesText:'', lastChecked:''}; DATA.meetingIntel.push(mi); }
+  return mi;
+}
+let MI_SELECTED_MEETING = '';
+function renderMeetingIntelPage(){
+  const meetingOptions = DATA.meetings.slice().sort((a,b)=>new Date(b.date)-new Date(a.date));
+  if(!MI_SELECTED_MEETING && meetingOptions.length) MI_SELECTED_MEETING = meetingOptions[0].number;
+  const mi = ensureMeetingIntel(MI_SELECTED_MEETING || 'Unlinked');
+  const covered = mi.points.filter(p=>p.status==='Covered').length;
+  const notFound = mi.points.filter(p=>p.status==='Not Found').length;
+  const pending = mi.points.filter(p=>!p.status || p.status==='Pending').length;
+
+  return `
+    <div class="page-head">
+      <div><h1>Agenda–Minutes Tracker</h1><div class="sub">Turn agenda items into a discussion checklist, then verify the minutes address every point.</div></div>
+    </div>
+    <div class="disclaimer-strip">
+      <span>&#9888;</span>
+      <span>This tool matches keywords between your discussion points and pasted minutes text — it is a local checklist aid, not document comprehension. Always read the final minutes yourself before relying on this check.</span>
+    </div>
+
+    <div class="card" style="padding:16px; margin-bottom:18px;">
+      <div class="form-field" style="max-width:420px;">
+        <label>Meeting</label>
+        <select onchange="MI_SELECTED_MEETING=this.value; renderPage();">
+          ${meetingOptions.map(m=>`<option value="${escapeHtml(m.number)}" ${MI_SELECTED_MEETING===m.number?'selected':''}>${escapeHtml(m.number)} — ${fmtDate(m.date)}</option>`).join('')}
+          <option value="Unlinked" ${MI_SELECTED_MEETING==='Unlinked'?'selected':''}>Not linked to a scheduled meeting</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid g-2">
+      <div class="section">
+        <div class="section-head"><h2>1. Discussion Points</h2></div>
+        <div class="card" style="padding:14px;">
+          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+            <button class="btn btn-sm btn-ghost" onclick="pullPointsFromAgenda()">&#8681; Pull from Agenda Review</button>
+            <button class="btn btn-sm btn-ghost" onclick="openPastAgendaText()">&#128221; Paste Agenda Text</button>
+            <button class="btn btn-sm btn-ghost" onclick="openAddPoint()">+ Add Point</button>
+          </div>
+          ${mi.points.length? `<div style="display:flex; flex-direction:column; gap:6px;">
+            ${mi.points.map((p,i)=>`
+              <div class="alert-row ${p.status==='Not Found'?'high':p.status==='Covered'?'low':'medium'}" style="padding:9px 11px; margin-bottom:0;">
+                <div class="bar"></div>
+                <div class="alert-body" style="flex:1;">
+                  <div class="flex-between" style="gap:8px;">
+                    <span style="font-size:12.5px;">${escapeHtml(p.text)}</span>
+                    <span class="pill pill-${p.status==='Covered'?'green':p.status==='Not Found'?'red':'gray'}" style="flex-shrink:0;">${p.status||'Pending'}</span>
+                  </div>
+                  <div class="mt8" style="display:flex; gap:6px;">
+                    <button class="btn btn-sm btn-ghost" onclick="removePoint(${i})">Remove</button>
+                  </div>
+                </div>
+              </div>`).join('')}
+          </div>` : `<div class="empty-state"><div class="ei">&#128203;</div><div class="et">No discussion points yet</div><div class="ed">Pull from Agenda Review or paste raw agenda text.</div></div>`}
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-head"><h2>2. Minutes Text</h2></div>
+        <div class="card" style="padding:14px;">
+          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+            <button class="btn btn-sm btn-ghost" onclick="pullMinutesFromRecords()">&#8681; Pull from Minutes Module</button>
+          </div>
+          <textarea id="miMinutesText" placeholder="Paste the circulated / signed minutes text here…" style="width:100%; min-height:220px; background:var(--panel-2); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:10px;">${escapeHtml(mi.minutesText||'')}</textarea>
+          <div style="display:flex; gap:8px; margin-top:10px;">
+            <button class="btn btn-ghost btn-sm" onclick="saveMinutesText()">Save Minutes Text</button>
+            <button class="btn btn-primary btn-sm" onclick="checkCoverage()">&#129302; Check Coverage</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    ${mi.lastChecked? `
+    <div class="section mt16">
+      <div class="section-head"><h2>Coverage Result</h2><span class="small-muted">Last checked ${fmtDate(mi.lastChecked)}</span></div>
+      <div class="grid g-3">
+        <div class="card kpi"><div class="label">Covered</div><div class="value" style="color:var(--green);">${covered}</div></div>
+        <div class="card kpi"><div class="label">Not Found</div><div class="value" style="color:${notFound>0?'var(--red)':'var(--text)'};">${notFound}</div></div>
+        <div class="card kpi"><div class="label">Total Points</div><div class="value">${mi.points.length}</div></div>
+      </div>
+      ${notFound>0? `<div class="mt12 small-muted">The points marked "Not Found" above may not be addressed in the pasted minutes text — worth confirming with the Company Secretary before you sign off.</div>` : `<div class="mt12 small-muted">All discussion points appear to be reflected in the minutes text.</div>`}
+    </div>` : ''}
+  `;
+}
+function pullPointsFromAgenda(){
+  const mi = ensureMeetingIntel(MI_SELECTED_MEETING);
+  const items = DATA.agendaItems.filter(a=>a.meetingRef===MI_SELECTED_MEETING);
+  if(!items.length){ toast('No linked Agenda Review items found for this meeting.', true); return; }
+  const existingTexts = new Set(mi.points.map(p=>p.text));
+  let added = 0;
+  items.forEach(a=>{
+    const text = `${a.number ? a.number+': ' : ''}${a.subject}${a.recommendation? ' — '+a.recommendation : ''}`;
+    if(!existingTexts.has(text)){ mi.points.push({id:uid('pt'), text, status:'Pending'}); added++; }
+  });
+  saveAll(); toast(added? `${added} point(s) pulled from Agenda Review.` : 'All agenda items already added.');
+  renderTopbar(); renderSidebar(); renderPage();
+}
+function openPastAgendaText(){
+  showModal(`
+    <div class="modal-head"><h3>Paste Agenda Text</h3><button class="modal-close" onclick="closeModal()">&#10005;</button></div>
+    <div class="field-hint mb8" style="margin-bottom:10px;">Paste the raw agenda (numbered list, bullets, or one item per line). Each line/item becomes a discussion point.</div>
+    <textarea id="pasteAgendaTa" style="width:100%; min-height:220px; background:var(--panel-2); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:10px;" placeholder="1. Approval of Q2 results&#10;2. RPT renewal&#10;3. CRO appointment"></textarea>
+    <div class="modal-foot"><div></div><div style="display:flex; gap:8px;"><button type="button" class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="extractPastedAgenda()">Extract Points</button></div></div>
+  `);
+}
+function extractPastedAgenda(){
+  const text = document.getElementById('pasteAgendaTa').value;
+  const points = extractPointsFromText(text);
+  if(!points.length){ toast('Could not identify any discussion points in that text.', true); return; }
+  const mi = ensureMeetingIntel(MI_SELECTED_MEETING);
+  const existingTexts = new Set(mi.points.map(p=>p.text));
+  let added = 0;
+  points.forEach(t=>{ if(!existingTexts.has(t)){ mi.points.push({id:uid('pt'), text:t, status:'Pending'}); added++; } });
+  saveAll(); closeModal(); toast(`${added} point(s) extracted.`);
+  renderTopbar(); renderSidebar(); renderPage();
+}
+function openAddPoint(){
+  showModal(`
+    <div class="modal-head"><h3>Add Discussion Point</h3><button class="modal-close" onclick="closeModal()">&#10005;</button></div>
+    <div class="form-field full"><label>Point</label><textarea id="newPointTa"></textarea></div>
+    <div class="modal-foot"><div></div><div style="display:flex; gap:8px;"><button type="button" class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="addManualPoint()">Add</button></div></div>
+  `);
+}
+function addManualPoint(){
+  const text = document.getElementById('newPointTa').value.trim();
+  if(!text) return;
+  const mi = ensureMeetingIntel(MI_SELECTED_MEETING);
+  mi.points.push({id:uid('pt'), text, status:'Pending'});
+  saveAll(); closeModal(); toast('Point added.');
+  renderTopbar(); renderSidebar(); renderPage();
+}
+function removePoint(index){
+  const mi = ensureMeetingIntel(MI_SELECTED_MEETING);
+  mi.points.splice(index,1);
+  saveAll(); toast('Point removed.');
+  renderTopbar(); renderSidebar(); renderPage();
+}
+function pullMinutesFromRecords(){
+  const mi = ensureMeetingIntel(MI_SELECTED_MEETING);
+  const recs = DATA.minutes.filter(m=>m.meetingRef===MI_SELECTED_MEETING);
+  if(!recs.length){ toast('No linked Minutes & Voting records found for this meeting.', true); return; }
+  const text = recs.map(m=>`${m.resolutionText||''} ${m.directorObservations||''} ${m.followUp||''}`).join('\n');
+  mi.minutesText = (mi.minutesText? mi.minutesText+'\n':'') + text;
+  saveAll(); toast('Minutes text pulled from Minutes & Voting Records.');
+  renderTopbar(); renderSidebar(); renderPage();
+}
+function saveMinutesText(){
+  const mi = ensureMeetingIntel(MI_SELECTED_MEETING);
+  mi.minutesText = document.getElementById('miMinutesText').value;
+  saveAll(); toast('Minutes text saved.');
+}
+function checkCoverage(){
+  const mi = ensureMeetingIntel(MI_SELECTED_MEETING);
+  mi.minutesText = document.getElementById('miMinutesText').value;
+  if(!mi.points.length){ toast('Add discussion points first.', true); return; }
+  if(!mi.minutesText.trim()){ toast('Paste or pull minutes text first.', true); return; }
+  mi.points.forEach(p=>{
+    const ratio = pointCoverageRatio(p.text, mi.minutesText);
+    p.status = ratio>=0.4 ? 'Covered' : 'Not Found';
+  });
+  mi.lastChecked = new Date().toISOString().slice(0,10);
+  saveAll(); toast('Coverage check complete.');
+  renderTopbar(); renderSidebar(); renderPage();
+}
+
+/* =========================================================================
    Reports & Documents
    ========================================================================= */
 function renderReportsPage(){
@@ -1711,6 +2130,7 @@ function renderReportsPage(){
     {key:'auditObservations', label:'Audit Observations Report', desc:'Open and closed audit findings with risk ratings.'},
     {key:'disclosures', label:'Disclosures & Declarations', desc:'Statutory declaration filing and validity status.'},
     {key:'rpts', label:'Related-Party Transactions Register', desc:'All proposed and approved RPTs.'},
+    {key:'irChecklist', label:'Roles & Responsibilities Checklist', desc:'Self-assessed status against every tracked director obligation.'},
   ];
   return `
     <div class="page-head"><div><h1>Governance Reports</h1><div class="sub">Download CSV exports of any register for offline review or board circulation.</div></div></div>
@@ -1806,7 +2226,7 @@ function importDataPrompt(){
   };
   input.click();
 }
-function sampleDataShape(){ return {company:{},director:{},meetings:[],agendaItems:[],minutes:[],actionItems:[],complianceEvents:[],disclosures:[],auditObservations:[],rpts:[],erm:[],ifc:[],complianceAreas:[]}; }
+function sampleDataShape(){ return {company:{},director:{},meetings:[],agendaItems:[],minutes:[],actionItems:[],complianceEvents:[],disclosures:[],auditObservations:[],rpts:[],erm:[],ifc:[],complianceAreas:[],irChecklist:[],meetingIntel:[]}; }
 function resetDemoData(){
   if(!confirm('This will replace ALL current records with fresh sample data. Continue?')) return;
   DATA = sampleData();
@@ -1827,6 +2247,7 @@ function openQuickAdd(){
     {label:'Disclosure / Declaration', fn:()=>openRecordForm('disclosures', null)},
     {label:'Audit Observation', fn:()=>openRecordForm('auditObservations', null)},
     {label:'Related-Party Transaction', fn:()=>openRecordForm('rpts', null)},
+    {label:'Custom Responsibility Item', fn:()=>openAddResponsibility()},
   ];
   window.__quickAddOptions = options;
   showModal(`
@@ -1860,7 +2281,7 @@ function renderAIDrawer(){
       ${AI_HISTORY.map(m=>`<div class="ai-msg ${m.role}">${escapeHtml(m.text)}</div>`).join('')}
     </div>
     <div class="ai-suggest">
-      ${['What needs my attention today?','Summarise open audit observations','Any pending RPT approvals?','Overdue disclosures?','Next board meeting?'].map(s=>`<span class="ai-chip" style="cursor:pointer;" onclick="askAI('${s.replace(/'/g,"\\'")}')">${s}</span>`).join('')}
+      ${['What needs my attention today?','My responsibilities score?','Agenda–minutes coverage?','Any pending RPT approvals?','Overdue disclosures?'].map(s=>`<span class="ai-chip" style="cursor:pointer;" onclick="askAI('${s.replace(/'/g,"\\'")}')">${s}</span>`).join('')}
     </div>
     <div class="ai-input-row">
       <input type="text" id="aiInput" placeholder="Ask about your governance records…" onkeydown="if(event.key==='Enter'){ askAI(this.value); this.value=''; }">
@@ -1919,10 +2340,26 @@ function generateAIReply(q){
     if(ev) return `${ev.title} — scheduled for ${fmtDate(ev.dueDate)}. This is a configured entry; always confirm against the company's actual trading window communication under the SEBI (Prohibition of Insider Trading) Regulations.`;
     return 'No trading window event is currently configured in the compliance calendar. You can add one from the Compliance Calendar module.';
   }
+  if(/responsib|duties|role|fulfil|obligation/.test(ql)){
+    const s = irScore();
+    const gaps = DATA.irChecklist.filter(r=>r.status==='No');
+    const unreviewed = DATA.irChecklist.filter(r=>r.status==='Not Reviewed');
+    let base = `Your self-assessed fulfilment score on the Roles & Responsibilities checklist is ${s}/100.`;
+    if(gaps.length) base += `\n${gaps.length} item(s) marked "Not Met": ${gaps.map(g=>g.item).join('; ')}.`;
+    if(unreviewed.length) base += `\n${unreviewed.length} item(s) not yet reviewed.`;
+    base += '\nOpen the Roles & Responsibilities module and run "AI Self-Assessment" for the full breakdown.';
+    return base;
+  }
+  if(/coverage|discussion point|minutes covered|agenda.*minutes|minutes.*agenda/.test(ql)){
+    const withGaps = DATA.meetingIntel.filter(mi=> mi.points.some(p=>p.status==='Not Found'));
+    if(!DATA.meetingIntel.length) return 'No meetings have been checked yet. Open the Agenda–Minutes Tracker, pull discussion points and minutes text, then run "Check Coverage".';
+    if(!withGaps.length) return 'All checked meetings currently show full coverage between agenda discussion points and minutes text.';
+    return `${withGaps.length} meeting(s) have discussion points not found in their minutes text:\n` + withGaps.map(mi=>`• ${mi.meetingRef} — ${mi.points.filter(p=>p.status==='Not Found').length} point(s) not found`).join('\n');
+  }
   if(/hello|hi|hey/.test(ql)){
     return `Hello ${DATA.director.name.split(' ')[0]}. I can help you search records, summarise pending items, or explain general governance concepts. What would you like to know?`;
   }
-  return "I can search records already in this workspace (action items, meetings, agendas, disclosures, audit observations, RPTs) and explain general governance concepts. I don't have a live connection to an external AI service in this demo, so for anything beyond your local records, please configure an AI API connection or consult your Company Secretary / legal advisor. Try asking about 'open audit observations', 'pending RPT approvals', or 'what needs my attention today'.";
+  return "I can search records already in this workspace (action items, meetings, agendas, disclosures, audit observations, RPTs, your responsibilities checklist and agenda–minutes coverage) and explain general governance concepts. I don't have a live connection to an external AI service in this demo, so for anything beyond your local records, please configure an AI API connection or consult your Company Secretary / legal advisor. Try asking about 'my responsibilities score', 'agenda minutes coverage', 'open audit observations', or 'what needs my attention today'.";
 }
 
 /* =========================================================================
