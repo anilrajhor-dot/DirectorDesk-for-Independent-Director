@@ -162,6 +162,25 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   background:none; border:none; outline:none; color:var(--text); width:100%; font-size:13px;
 }
 .topbar-search input::placeholder{color:var(--text-faint);}
+.search-results-panel{
+  display:none; position:absolute; top:calc(100% + 6px); left:0; right:0;
+  background:var(--bg-2); border:1px solid var(--border); border-radius:var(--radius);
+  max-height:360px; overflow-y:auto; box-shadow:0 12px 32px rgba(0,0,0,0.45); z-index:60;
+}
+.search-result-row{
+  display:flex; align-items:center; gap:8px; padding:9px 12px; cursor:pointer; font-size:12.5px;
+  border-bottom:1px solid var(--border-soft);
+}
+.search-result-row:last-child{border-bottom:none;}
+.search-result-row:hover{background:var(--panel);}
+.srr-label{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.search-empty{padding:14px; font-size:12px; color:var(--text-faint); text-align:center;}
+.bulk-bar{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  background:var(--blue-soft); border:1px solid rgba(47,125,255,0.3); border-radius:var(--radius-sm);
+  padding:9px 12px; margin-bottom:12px;
+}
+.bulk-bar select{background:var(--panel-2); border:1px solid var(--border); color:var(--text); border-radius:6px; padding:5px 8px; font-size:12.5px;}
 .topbar-search .k{color:var(--text-faint); font-size:12px;}
 
 .topbar-right{margin-left:auto; display:flex; align-items:center; gap:8px;}
@@ -376,6 +395,39 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
   box-shadow:0 8px 24px rgba(0,0,0,0.4); animation:toastIn .18s ease;
 }
 .toast.err{border-left-color:var(--red);}
+.toast{display:flex; align-items:center; gap:12px; justify-content:space-between;}
+.toast-undo{background:none; border:1px solid var(--border); color:var(--blue); font-weight:700; font-size:11.5px; padding:4px 10px; border-radius:6px; flex-shrink:0;}
+.toast-undo:hover{background:var(--blue-soft);}
+
+#lockScreen{
+  position:fixed; inset:0; background:var(--bg); z-index:500;
+  display:flex; align-items:center; justify-content:center; padding:20px;
+}
+.lock-card{
+  width:100%; max-width:340px; background:var(--panel); border:1px solid var(--border-soft);
+  border-radius:14px; padding:28px 24px; text-align:center;
+}
+.lock-mark{
+  width:52px; height:52px; border-radius:12px; margin:0 auto 16px;
+  background:linear-gradient(135deg, var(--blue), #1B4FB8);
+  display:flex; align-items:center; justify-content:center; font-weight:700; font-size:18px; color:#fff;
+}
+.lock-title{font-size:16px; font-weight:700; margin-bottom:4px;}
+.lock-sub{font-size:12.5px; color:var(--text-dim); margin-bottom:18px;}
+.lock-card input{
+  width:100%; text-align:center; letter-spacing:4px; font-size:18px;
+  background:var(--panel-2); border:1px solid var(--border); color:var(--text);
+  border-radius:var(--radius-sm); padding:11px; margin-bottom:6px;
+}
+.lock-error{color:var(--red); font-size:12px; margin-bottom:6px;}
+.lock-hint{font-size:10.5px; color:var(--text-faint); margin-top:14px; line-height:1.5;}
+
+#printReportArea{display:none;}
+@media print{
+  body.printing-report > *:not(#printReportArea){display:none !important;}
+  body.printing-report #printReportArea{display:block !important; padding:24px; color:#000; background:#fff;}
+  body.printing-report{background:#fff;}
+}
 @keyframes toastIn{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
 
 .disclaimer-strip{
@@ -448,6 +500,7 @@ tbody tr:hover{background:rgba(255,255,255,0.02);}
 <div id="aiDrawer"></div>
 <div id="modalRoot"></div>
 <div class="toast-wrap" id="toastWrap"></div>
+<div id="printReportArea"></div>
 
 <script>
 /* =========================================================================
@@ -462,6 +515,13 @@ function uid(prefix){ return prefix + '_' + Math.random().toString(36).slice(2,9
 function fmtDate(d){ if(!d) return '—'; const dt = new Date(d+'T00:00:00'); if(isNaN(dt)) return d; return dt.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}); }
 function daysUntil(d){ if(!d) return null; const dt = new Date(d+'T00:00:00'); return Math.round((dt-TODAY)/86400000); }
 function money(n){ n = Number(n)||0; return '₹' + n.toLocaleString('en-IN'); }
+function rptMaterialityThreshold(){
+  const turnover = Number(DATA.company && DATA.company.annualTurnover) || 0;
+  const CAP = 10000000000; // ₹1,000 crore — SEBI LODR Reg 23 absolute cap
+  if(turnover>0) return Math.min(CAP, turnover*0.10);
+  return CAP;
+}
+function isMaterialRpt(value){ return (Number(value)||0) >= rptMaterialityThreshold(); }
 function escapeHtml(s){ if(s===undefined||s===null) return ''; return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 /* ---------------- Default / sample data ---------------- */
@@ -617,6 +677,19 @@ function sampleData(){
       { id:'rr26', category:'SEBI LODR & Statutory Compliance', item:'Attend familiarisation programmes on the company, its business model, and director roles/responsibilities.', status:'Yes', remarks:'' },
     ],
     meetingIntel: [],
+    csr: [
+      { id: uid('cs'), project:'Skill Development Program — Rural Youth', category:'Skill Development (Schedule VII)', budgetAllocated:22000000, amountSpent:14500000, status:'In Progress', dueDate: addDays(90), remarks:'Funded via Meridian Foundation; Q2 disbursement completed.' },
+      { id: uid('cs'), project:'School Infrastructure Upgrade — Nashik District', category:'Education (Schedule VII)', budgetAllocated:8500000, amountSpent:8500000, status:'Completed', dueDate: addDays(-30), remarks:'Utilisation certificate received.' },
+      { id: uid('cs'), project:'Rural Healthcare Mobile Units', category:'Healthcare (Schedule VII)', budgetAllocated:12000000, amountSpent:3200000, status:'Not Started', dueDate: addDays(150), remarks:'Vendor selection in progress.' },
+    ],
+    directorships: [
+      { id: uid('dr'), company:'Meridian Industries Ltd', cin:'L27100MH2005PLC152834', listed:'Yes', role:'Independent Director', committees:'Audit Committee (Member), NRC (Chairperson)', appointedOn: addDays(-1400), status:'Active' },
+      { id: uid('dr'), company:'Sunrise Textiles Ltd', cin:'L17110GJ1998PLC034521', listed:'Yes', role:'Independent Director', committees:'Audit Committee (Member), Stakeholders Relationship Committee (Chairperson)', appointedOn: addDays(-2100), status:'Active' },
+      { id: uid('dr'), company:'GreenLeaf Foundation', cin:'U85300DL2015NPL280112', listed:'No', role:'Trustee / Director', committees:'', appointedOn: addDays(-900), status:'Active' },
+    ],
+    activityLog: [],
+    aiConfig: { apiKey:'', model:'claude-sonnet-4-6', enabled:false },
+    security: { pinHash:null, pinEnabled:false },
   };
 }
 function addDays(n){ const d = new Date(); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); }
@@ -641,17 +714,133 @@ function loadData(){
 }
 function persist(d){
   try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(d||DATA)); }
-  catch(e){ console.error('Storage save failed', e); toast('Could not save — browser storage may be full.', true); }
+  catch(e){ console.error('Storage save failed', e); toast('Could not save — browser storage may be full. Try Settings → Clean Up Storage.', true); }
 }
 function saveAll(){ persist(DATA); }
 
-function toast(msg, isErr){
+/* ---------------- Versioned auto-backups ---------------- */
+const BACKUP_KEY = 'idgos_backups_v1';
+function maybeAutoBackup(){
+  try{
+    const today = new Date().toISOString().slice(0,10);
+    const raw = localStorage.getItem(BACKUP_KEY);
+    const backups = raw ? JSON.parse(raw) : [];
+    if(backups.length && backups[backups.length-1].date===today) return;
+    backups.push({date:today, data: DATA});
+    while(backups.length>3) backups.shift();
+    localStorage.setItem(BACKUP_KEY, JSON.stringify(backups));
+  }catch(e){ console.warn('Auto-backup skipped — likely a storage constraint.', e); }
+}
+function listBackups(){
+  try{ const raw = localStorage.getItem(BACKUP_KEY); return raw ? JSON.parse(raw) : []; }
+  catch(e){ return []; }
+}
+function restoreBackup(date){
+  const backups = listBackups();
+  const b = backups.find(x=>x.date===date);
+  if(!b) return;
+  if(!confirm(`Restore data as it was on ${date}? Your current data will be replaced (attachments in file storage are unaffected).`)) return;
+  DATA = b.data;
+  saveAll();
+  toast(`Restored to ${date}.`);
+  renderTopbar(); renderSidebar(); renderPage();
+}
+function storageUsageInfo(){
+  let dataBytes=0, backupBytes=0;
+  try{ dataBytes = new Blob([localStorage.getItem(STORAGE_KEY)||'']).size; }catch(e){}
+  try{ backupBytes = new Blob([localStorage.getItem(BACKUP_KEY)||'']).size; }catch(e){}
+  return { dataBytes, backupBytes, totalMB: (dataBytes+backupBytes)/(1024*1024) };
+}
+
+/* ---------------- IndexedDB attachment storage ---------------- */
+const IDB_NAME='idgos_files_v1', IDB_STORE='attachments';
+let idbPromise = null;
+function idbOpen(){
+  if(idbPromise) return idbPromise;
+  idbPromise = new Promise((resolve,reject)=>{
+    if(!window.indexedDB){ reject(new Error('IndexedDB not available in this browser.')); return; }
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = ()=>{ req.result.createObjectStore(IDB_STORE, {keyPath:'id'}); };
+    req.onsuccess = ()=> resolve(req.result);
+    req.onerror = ()=> reject(req.error);
+  });
+  return idbPromise;
+}
+async function idbPut(id, name, type, dataUrl){
+  const db = await idbOpen();
+  return new Promise((resolve,reject)=>{
+    const tx = db.transaction(IDB_STORE,'readwrite');
+    tx.objectStore(IDB_STORE).put({id, name, type, dataUrl});
+    tx.oncomplete = ()=>resolve(true);
+    tx.onerror = ()=>reject(tx.error);
+  });
+}
+async function idbGet(id){
+  const db = await idbOpen();
+  return new Promise((resolve,reject)=>{
+    const tx = db.transaction(IDB_STORE,'readonly');
+    const req = tx.objectStore(IDB_STORE).get(id);
+    req.onsuccess = ()=>resolve(req.result||null);
+    req.onerror = ()=>reject(req.error);
+  });
+}
+async function idbDelete(id){
+  const db = await idbOpen();
+  return new Promise((resolve,reject)=>{
+    const tx = db.transaction(IDB_STORE,'readwrite');
+    tx.objectStore(IDB_STORE).delete(id);
+    tx.oncomplete = ()=>resolve(true);
+    tx.onerror = ()=>reject(tx.error);
+  });
+}
+async function idbGetAll(){
+  const db = await idbOpen();
+  return new Promise((resolve,reject)=>{
+    const tx = db.transaction(IDB_STORE,'readonly');
+    const req = tx.objectStore(IDB_STORE).getAll();
+    req.onsuccess = ()=>resolve(req.result||[]);
+    req.onerror = ()=>reject(req.error);
+  });
+}
+async function cleanupOrphanedAttachments(){
+  const referenced = new Set();
+  Object.values(MODULES).forEach(mod=>{
+    (DATA[mod.dataKey]||[]).forEach(r=> (r.attachments||[]).forEach(a=> referenced.add(a.id)));
+  });
+  (DATA.meetings||[]).forEach(m=> (m.attachments||[]).forEach(a=>referenced.add(a.id)));
+  (DATA.complianceEvents||[]).forEach(e=> (e.attachments||[]).forEach(a=>referenced.add(a.id)));
+  try{
+    const all = await idbGetAll();
+    const orphans = all.filter(f=>!referenced.has(f.id));
+    for(const o of orphans){ await idbDelete(o.id); }
+    toast(`Cleanup complete — removed ${orphans.length} unreferenced file(s).`);
+    renderPage();
+  }catch(e){ toast('Cleanup failed — IndexedDB unavailable in this browser.', true); }
+}
+
+/* ---------------- Activity Log ---------------- */
+function logActivity(entry){
+  DATA.activityLog = DATA.activityLog || [];
+  DATA.activityLog.unshift({ id: uid('log'), ts: new Date().toISOString(), ...entry });
+  if(DATA.activityLog.length>300) DATA.activityLog.length = 300;
+}
+
+function toast(msg, isErr, undoFn){
   const wrap = document.getElementById('toastWrap');
   const el = document.createElement('div');
   el.className = 'toast' + (isErr?' err':'');
-  el.textContent = msg;
+  const msgSpan = document.createElement('span');
+  msgSpan.textContent = msg;
+  el.appendChild(msgSpan);
+  if(undoFn){
+    const btn = document.createElement('button');
+    btn.textContent = 'Undo';
+    btn.className = 'toast-undo';
+    btn.onclick = ()=>{ undoFn(); el.remove(); };
+    el.appendChild(btn);
+  }
   wrap.appendChild(el);
-  setTimeout(()=>{ el.remove(); }, 3200);
+  setTimeout(()=>{ el.remove(); }, undoFn ? 6000 : 3200);
 }
 
 /* =========================================================================
@@ -676,6 +865,7 @@ const NAV = [
   { group:'Self-Assessment & AI Tools', items:[
     { id:'responsibilities', label:'Roles & Responsibilities', icon:'&#9989;' },
     { id:'meetingIntel', label:'Agenda–Minutes Tracker', icon:'&#129504;' },
+    { id:'directorships', label:'My Directorships', icon:'&#128188;' },
   ]},
   { group:'Fiduciary & Statutory', items:[
     { id:'disclosures', label:'Disclosures & Declarations', icon:'&#9888;' },
@@ -685,7 +875,9 @@ const NAV = [
     { id:'rpt', label:'Related-Party Transactions', icon:'&#128260;' },
     { id:'erm', label:'Enterprise Risk Management', icon:'&#9889;' },
     { id:'ifc', label:'Internal Financial Controls', icon:'&#128272;' },
+    { id:'csr', label:'CSR Obligations', icon:'&#127793;' },
     { id:'reports', label:'Governance Reports', icon:'&#128202;' },
+    { id:'activityLog', label:'Activity Log', icon:'&#128203;' },
     { id:'settings', label:'Settings', icon:'&#9881;' },
   ]},
 ];
@@ -746,9 +938,10 @@ function renderTopbar(){
       <div class="c-name">${escapeHtml(DATA.company.name)}</div>
       <div class="c-meta">${escapeHtml(DATA.company.cin)} · ${escapeHtml(DATA.company.listing)}</div>
     </div>
-    <div class="topbar-search">
+    <div class="topbar-search" style="position:relative;">
       <span class="k">&#128269;</span>
-      <input type="text" id="globalSearch" placeholder="Search tasks, agendas, meetings…" oninput="handleGlobalSearch(this.value)">
+      <input type="text" id="globalSearch" placeholder="Search everything…" autocomplete="off" oninput="handleGlobalSearch(this.value)" onkeydown="if(event.key==='Escape'){ this.value=''; document.getElementById('searchResultsPanel').style.display='none'; }">
+      <div id="searchResultsPanel" class="search-results-panel"></div>
     </div>
     <div class="topbar-right">
       <span class="tb-date">${todayStr}</span>
@@ -765,25 +958,71 @@ function openSidebar(){ document.getElementById('sidebar').classList.add('open')
 function closeSidebar(){ document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebarScrim').classList.remove('open'); }
 
 function handleGlobalSearch(q){
-  if(!q || q.trim().length<2) return;
-  q = q.trim().toLowerCase();
-  // Route to the most relevant module based on simple keyword match, then filter there.
-  let target = 'dashboard';
-  if(/rpt|related.party/.test(q)) target='rpt';
-  else if(/agenda/.test(q)) target='agenda';
-  else if(/minute|voting/.test(q)) target='minutes';
-  else if(/disclos|mbp|dir-8|dir8/.test(q)) target='disclosures';
-  else if(/audit/.test(q)) target='audit';
-  else if(/meeting|board/.test(q)) target='boardMeetings';
-  else if(/committee/.test(q)) target='committeeMeetings';
-  else if(/task|action/.test(q)) target='actions';
-  else if(/calendar|deadline|compliance/.test(q)) target='calendar';
-  if(target!==CURRENT_PAGE){ goTo(target); }
-  setTimeout(()=>{ const f = document.getElementById('moduleSearchInput'); if(f){ f.value=q; f.dispatchEvent(new Event('input')); } },30);
+  const panel = document.getElementById('searchResultsPanel');
+  if(!panel) return;
+  if(!q || q.trim().length<2){ panel.style.display='none'; panel.innerHTML=''; return; }
+  const results = searchAllRecords(q.trim());
+  if(!results.length){
+    panel.innerHTML = `<div class="search-empty">No matches for "${escapeHtml(q.trim())}"</div>`;
+    panel.style.display='block';
+    return;
+  }
+  panel.innerHTML = results.map(r=>`
+    <div class="search-result-row" onmousedown="goToSearchResult('${r.moduleKey}','${r.id}')">
+      <span class="pill pill-gray">${escapeHtml(PAGE_TITLES[r.moduleKey]||r.moduleKey)}</span>
+      <span class="srr-label">${escapeHtml(String(r.label).slice(0,70))}</span>
+    </div>`).join('');
+  panel.style.display='block';
 }
+function searchAllRecords(q){
+  q = q.toLowerCase();
+  const results = [];
+  function scan(dataKey, moduleKey, labelFields){
+    (DATA[dataKey]||[]).forEach(r=>{
+      const hay = JSON.stringify(r).toLowerCase();
+      if(hay.includes(q)){
+        let label = 'Record';
+        for(const f of labelFields){ if(r[f]){ label = r[f]; break; } }
+        results.push({moduleKey, id:r.id, label});
+      }
+    });
+  }
+  scan('actionItems','actions',['title']);
+  scan('agendaItems','agenda',['subject']);
+  scan('minutes','minutes',['resolutionText']);
+  scan('disclosures','disclosures',['type']);
+  scan('auditObservations','audit',['area']);
+  scan('rpts','rpt',['party']);
+  scan('erm','erm',['riskArea']);
+  scan('ifc','ifc',['controlArea']);
+  scan('csr','csr',['project']);
+  scan('directorships','directorships',['company']);
+  scan('irChecklist','responsibilities',['item']);
+  scan('meetings','boardMeetings',['number']);
+  scan('complianceEvents','calendar',['title']);
+  return results.slice(0,20);
+}
+function goToSearchResult(moduleKey, id){
+  const panel = document.getElementById('searchResultsPanel');
+  if(panel){ panel.style.display='none'; panel.innerHTML=''; }
+  const input = document.getElementById('globalSearch');
+  if(input) input.value='';
+  goTo(moduleKey);
+  setTimeout(()=>{
+    if(MODULES[moduleKey]){ openRecordForm(moduleKey, id); }
+    else if(moduleKey==='boardMeetings' || moduleKey==='committeeMeetings'){ openMeetingForm(id); }
+    else if(moduleKey==='calendar'){ openCalendarEventForm(id); }
+  }, 150);
+}
+document.addEventListener('click', function(e){
+  const panel = document.getElementById('searchResultsPanel');
+  if(!panel || panel.style.display==='none') return;
+  if(!e.target.closest('.topbar-search')){ panel.style.display='none'; }
+});
 
 function goTo(pageId){
   CURRENT_PAGE = pageId;
+  BULK_SELECTED.clear();
   closeSidebar();
   renderSidebar();
   renderPage();
@@ -809,6 +1048,9 @@ function renderPage(){
     case 'rpt': el.innerHTML = renderModulePage('rpts'); break;
     case 'erm': el.innerHTML = renderModulePage('erm'); break;
     case 'ifc': el.innerHTML = renderModulePage('ifc'); break;
+    case 'csr': el.innerHTML = renderModulePage('csr'); break;
+    case 'directorships': el.innerHTML = renderDirectorshipsPage(); break;
+    case 'activityLog': el.innerHTML = renderActivityLogPage(); break;
     case 'reports': el.innerHTML = renderReportsPage(); break;
     case 'settings': el.innerHTML = renderSettingsPage(); break;
     default: el.innerHTML = renderDashboard();
@@ -950,6 +1192,7 @@ const MODULES = {
       {key:'party', label:'Related Party'},
       {key:'nature', label:'Nature of Transaction'},
       {key:'value', label:'Value', type:'money'},
+      {key:'material', label:'Materiality', type:'pill', pillMap:{'Material (Reg 23)':'red','Not Material':'gray'}},
       {key:'approvalRequired', label:'Approval Level'},
       {key:'status', label:'Status', type:'status'},
     ],
@@ -1003,9 +1246,90 @@ const MODULES = {
       {key:'attachments', label:'Supporting Documents', type:'files', full:true},
     ],
   },
+  csr:{
+    label:'CSR Obligations', icon:'&#127793;', dataKey:'csr',
+    title:'CSR Obligations', sub:'Schedule VII projects, budget allocation and spend tracking.',
+    statusField:'status', statusOptions:['Not Started','In Progress','Completed'],
+    statusColor:{'Not Started':'gray', 'In Progress':'amber', Completed:'green'},
+    columns:[
+      {key:'project', label:'Project'},
+      {key:'category', label:'Schedule VII Category'},
+      {key:'budgetAllocated', label:'Budget', type:'money'},
+      {key:'amountSpent', label:'Spent', type:'money'},
+      {key:'status', label:'Status', type:'status'},
+    ],
+    fields:[
+      {key:'project', label:'Project Name', type:'text', required:true, full:true},
+      {key:'category', label:'Schedule VII Category', type:'text', full:true},
+      {key:'budgetAllocated', label:'Budget Allocated (₹)', type:'number', required:true},
+      {key:'amountSpent', label:'Amount Spent (₹)', type:'number'},
+      {key:'status', label:'Status', type:'select', options:['Not Started','In Progress','Completed'], required:true},
+      {key:'dueDate', label:'Target Completion Date', type:'date'},
+      {key:'remarks', label:'Remarks', type:'textarea', full:true},
+      {key:'attachments', label:'Supporting Documents', type:'files', full:true},
+    ],
+    quickActions:[{label:'Mark Completed', status:'Completed'}],
+  },
+  directorships:{
+    label:'Directorships', icon:'&#128188;', dataKey:'directorships',
+    title:'My Directorships', sub:'Every company/entity you serve on, to track SEBI LODR and Companies Act limits.',
+    statusField:'status', statusOptions:['Active','Resigned'],
+    statusColor:{Active:'green', Resigned:'gray'},
+    columns:[
+      {key:'company', label:'Company / Entity'},
+      {key:'listed', label:'Listed'},
+      {key:'role', label:'Role'},
+      {key:'committees', label:'Committee Memberships'},
+      {key:'status', label:'Status', type:'status'},
+    ],
+    fields:[
+      {key:'company', label:'Company / Entity Name', type:'text', required:true, full:true},
+      {key:'cin', label:'CIN / Registration No.', type:'text'},
+      {key:'listed', label:'Listed Entity?', type:'select', options:['Yes','No'], required:true},
+      {key:'role', label:'Role', type:'text', required:true},
+      {key:'committees', label:'Committee Memberships (comma-separated, note Chairperson)', type:'text', full:true},
+      {key:'appointedOn', label:'Appointed On', type:'date'},
+      {key:'status', label:'Status', type:'select', options:['Active','Resigned'], required:true},
+    ],
+  },
 };
 
 let MODULE_FILTER = { search:'', status:'All' };
+let BULK_SELECTED = new Set();
+let BULK_MODULE = null;
+
+function directorshipStats(){
+  const active = DATA.directorships.filter(d=>d.status==='Active');
+  const listedCount = active.filter(d=>d.listed==='Yes').length;
+  const totalCount = active.length;
+  let committeeMemberships = 0, chairCount = 0;
+  active.forEach(d=>{
+    (d.committees||'').split(',').map(c=>c.trim()).filter(Boolean).forEach(c=>{
+      if(/audit|stakeholder/i.test(c)){
+        committeeMemberships++;
+        if(/chair/i.test(c)) chairCount++;
+      }
+    });
+  });
+  return { listedCount, totalCount, committeeMemberships, chairCount };
+}
+function renderDirectorshipsPage(){
+  const s = directorshipStats();
+  const cap = (val, max)=> val>=max ? 'red' : val>=max-1 ? 'amber' : 'green';
+  const summary = `
+    <div class="disclaimer-strip">
+      <span>&#9888;</span>
+      <span>Limits shown are commonly cited caps under Section 165 (Companies Act, 2013) and SEBI LODR Regulations 25(1) &amp; 26(1). Committee-membership counting here is an approximate text match on your "Committee Memberships" field — verify the exact count against your actual letters of appointment.</span>
+    </div>
+    <div class="grid g-4" style="margin-bottom:20px;">
+      <div class="card kpi"><div class="label">Listed Directorships</div><div class="value" style="color:var(--${cap(s.listedCount,7)});">${s.listedCount}<span style="font-size:14px; color:var(--text-faint);">/7</span></div><div class="foot">SEBI LODR Reg 25(1)</div></div>
+      <div class="card kpi"><div class="label">Total Directorships</div><div class="value" style="color:var(--${cap(s.totalCount,20)});">${s.totalCount}<span style="font-size:14px; color:var(--text-faint);">/20</span></div><div class="foot">Companies Act s.165</div></div>
+      <div class="card kpi"><div class="label">Committee Memberships</div><div class="value" style="color:var(--${cap(s.committeeMemberships,10)});">${s.committeeMemberships}<span style="font-size:14px; color:var(--text-faint);">/10</span></div><div class="foot">Audit + Stakeholders Cttees, Reg 26(1)</div></div>
+      <div class="card kpi"><div class="label">Committee Chairpersonships</div><div class="value" style="color:var(--${cap(s.chairCount,5)});">${s.chairCount}<span style="font-size:14px; color:var(--text-faint);">/5</span></div><div class="foot">Reg 26(1) proviso</div></div>
+    </div>
+  `;
+  return summary + renderModulePage('directorships');
+}
 
 function renderModulePage(moduleKey, opts){
   opts = opts||{};
@@ -1031,6 +1355,9 @@ function renderModulePage(moduleKey, opts){
       ${mod.statusOptions.map(s=>`<option value="${s}" ${MODULE_FILTER.status===s?'selected':''}>${s}</option>`).join('')}
     </select>` : '';
 
+  if(BULK_MODULE!==moduleKey){ BULK_SELECTED.clear(); BULK_MODULE = moduleKey; }
+  const selectedCount = BULK_SELECTED.size;
+
   return `
     <div class="page-head">
       <div><h1>${escapeHtml(title)}</h1><div class="sub">${escapeHtml(sub)}</div></div>
@@ -1044,6 +1371,18 @@ function renderModulePage(moduleKey, opts){
       ${statusOptionsHtml}
       <span class="small-muted">${filtered.length} of ${records.length} records</span>
     </div>
+    ${selectedCount>0 ? `
+    <div class="bulk-bar">
+      <span class="small-muted">${selectedCount} selected</span>
+      ${mod.statusField ? `
+        <select id="bulkStatusSelect">
+          ${mod.statusOptions.map(s=>`<option value="${s}">${s}</option>`).join('')}
+        </select>
+        <button class="btn btn-sm btn-ghost" onclick="bulkApplyStatus('${moduleKey}', document.getElementById('bulkStatusSelect').value)">Apply Status</button>
+      ` : ''}
+      <button class="btn btn-sm btn-ghost" onclick="bulkExportSelected('${moduleKey}')">&#8681; Export Selected</button>
+      <button class="btn btn-sm btn-ghost" onclick="bulkClearSelection()">Clear</button>
+    </div>` : ''}
     ${renderModuleTable(moduleKey, filtered)}
   `;
 }
@@ -1057,11 +1396,14 @@ function renderModuleTable(moduleKey, records){
       <div class="ed">Try adjusting your filters, or add a new record to get started.</div>
     </div></div>`;
   }
+  const allSelected = records.length>0 && records.every(r=>BULK_SELECTED.has(r.id));
   let html = `<div class="table-wrap"><table><thead><tr>`;
+  html += `<th style="width:32px;"><input type="checkbox" ${allSelected?'checked':''} onchange="toggleBulkSelectAll('${moduleKey}', this.checked)"></th>`;
   mod.columns.forEach(c=> html += `<th>${escapeHtml(c.label)}</th>`);
   html += `<th>Actions</th></tr></thead><tbody>`;
   records.forEach(r=>{
     html += `<tr>`;
+    html += `<td><input type="checkbox" ${BULK_SELECTED.has(r.id)?'checked':''} onchange="toggleBulkSelect('${r.id}')"></td>`;
     mod.columns.forEach(c=>{
       html += `<td>${renderCell(r, c)}</td>`;
     });
@@ -1074,6 +1416,43 @@ function renderModuleTable(moduleKey, records){
   });
   html += `</tbody></table></div>`;
   return html;
+}
+function toggleBulkSelect(id){
+  if(BULK_SELECTED.has(id)) BULK_SELECTED.delete(id); else BULK_SELECTED.add(id);
+  renderPage();
+}
+function toggleBulkSelectAll(moduleKey, checked){
+  const mod = MODULES[moduleKey];
+  const q = (MODULE_FILTER.search||'').toLowerCase();
+  const visible = (DATA[mod.dataKey]||[]).filter(r=>{
+    if(q && !Object.values(r).join(' ').toLowerCase().includes(q)) return false;
+    if(mod.statusField && MODULE_FILTER.status!=='All' && r[mod.statusField]!==MODULE_FILTER.status) return false;
+    return true;
+  });
+  if(checked){ visible.forEach(r=>BULK_SELECTED.add(r.id)); } else { visible.forEach(r=>BULK_SELECTED.delete(r.id)); }
+  renderPage();
+}
+function bulkClearSelection(){ BULK_SELECTED.clear(); renderPage(); }
+function bulkApplyStatus(moduleKey, status){
+  const mod = MODULES[moduleKey];
+  let count = 0;
+  DATA[mod.dataKey].forEach(r=>{
+    if(BULK_SELECTED.has(r.id)){ r[mod.statusField] = status; count++; }
+  });
+  logActivity({module:mod.label, action:'Bulk status change', detail:`${count} record(s) → ${status}`});
+  saveAll();
+  toast(`Updated ${count} record(s) to "${status}".`);
+  BULK_SELECTED.clear();
+  renderTopbar(); renderSidebar(); renderPage();
+}
+function bulkExportSelected(moduleKey){
+  const mod = MODULES[moduleKey];
+  const rows = DATA[mod.dataKey].filter(r=>BULK_SELECTED.has(r.id));
+  if(!rows.length){ toast('No rows selected.', true); return; }
+  const headers = mod.fields.filter(f=>f.type!=='files').map(f=>f.key);
+  const lines = [headers.join(',')];
+  rows.forEach(r=> lines.push(headers.map(h=>`"${String(r[h]===undefined?'':r[h]).replace(/"/g,'""')}"`).join(',')));
+  downloadFile(`${moduleKey}_selected_${new Date().toISOString().slice(0,10)}.csv`, lines.join('\n'), 'text/csv');
 }
 function renderCell(r, c){
   const v = r[c.key];
@@ -1137,7 +1516,7 @@ function renderFieldInput(f, val){
     return `<div class="attach-field">
       <div class="attach-list" id="attachList">${renderAttachList()}</div>
       <input type="file" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" onchange="handleAttachInput(this)">
-      <div class="field-hint">Photos, scans, PDFs or Office files — up to 2MB each. Stored in this browser only.</div>
+      <div class="field-hint">Photos, scans, PDFs or Office files — up to 8MB each. Stored locally in this browser's file storage.</div>
     </div>`;
   }
   return `<input type="${f.type||'text'}" name="${name}" value="${escapeHtml(val)}" ${f.required?'required':''}>`;
@@ -1147,36 +1526,40 @@ function renderAttachList(){
   return FORM_ATTACHMENTS.map((a,i)=>`
     <div class="attach-chip">
       <span class="an">&#128206; ${escapeHtml(a.name)}</span>
-      <a href="${a.dataUrl}" target="_blank" rel="noopener" download="${escapeHtml(a.name)}">View</a>
+      <a onclick="openAttachmentFile('${a.id}')" style="cursor:pointer;">View</a>
       <span class="rm" onclick="removeAttachment(${i})" title="Remove">&#10005;</span>
     </div>`).join('');
 }
+const ATTACH_MAX_BYTES = 8*1024*1024;
 function handleAttachInput(inputEl){
   const files = Array.from(inputEl.files || []);
   if(!files.length) return;
-  let remaining = files.length;
   files.forEach(file=>{
-    if(file.size > 2*1024*1024){
-      toast(`"${file.name}" exceeds the 2MB limit and was not attached.`, true);
-      remaining--; if(remaining===0) inputEl.value='';
+    if(file.size > ATTACH_MAX_BYTES){
+      toast(`"${file.name}" exceeds the 8MB limit and was not attached.`, true);
       return;
     }
     const reader = new FileReader();
-    reader.onload = ()=>{
-      FORM_ATTACHMENTS.push({name:file.name, dataUrl:reader.result});
-      const list = document.getElementById('attachList');
-      if(list) list.innerHTML = renderAttachList();
-      remaining--; if(remaining===0) inputEl.value='';
+    reader.onload = async ()=>{
+      const attId = uid('att');
+      try{
+        await idbPut(attId, file.name, file.type, reader.result);
+        FORM_ATTACHMENTS.push({id:attId, name:file.name});
+        const list = document.getElementById('attachList');
+        if(list) list.innerHTML = renderAttachList();
+      }catch(e){
+        toast('Could not store attachment — this browser may not support local file storage.', true);
+      }
     };
-    reader.onerror = ()=>{
-      toast(`Could not read "${file.name}".`, true);
-      remaining--; if(remaining===0) inputEl.value='';
-    };
+    reader.onerror = ()=>{ toast(`Could not read "${file.name}".`, true); };
     reader.readAsDataURL(file);
   });
+  inputEl.value = '';
 }
 function removeAttachment(idx){
+  const att = FORM_ATTACHMENTS[idx];
   FORM_ATTACHMENTS.splice(idx,1);
+  if(att) idbDelete(att.id).catch(()=>{});
   const list = document.getElementById('attachList');
   if(list) list.innerHTML = renderAttachList();
 }
@@ -1185,6 +1568,8 @@ function submitRecordForm(evt, moduleKey, id){
   const mod = MODULES[moduleKey];
   const form = evt.target;
   const record = id ? (DATA[mod.dataKey].find(r=>r.id===id)) : { id: uid(moduleKey.slice(0,2)) };
+  const wasNew = !id;
+  const prevStatus = mod.statusField ? record[mod.statusField] : undefined;
   mod.fields.forEach(f=>{
     if(f.type==='files') return;
     const el = form.elements[f.key];
@@ -1192,7 +1577,15 @@ function submitRecordForm(evt, moduleKey, id){
     record[f.key] = f.type==='checkbox' ? el.checked : el.value;
   });
   record.attachments = FORM_ATTACHMENTS.slice();
+  if(moduleKey==='rpts'){ record.material = isMaterialRpt(record.value) ? 'Material (Reg 23)' : 'Not Material'; }
   if(!id){ DATA[mod.dataKey].push(record); }
+  const labelField = mod.columns[0] ? mod.columns[0].key : 'id';
+  const label = String(record[labelField]||record.id).slice(0,60);
+  if(wasNew){
+    logActivity({module:mod.label, action:'Created', detail:label});
+  } else if(mod.statusField && prevStatus!==record[mod.statusField]){
+    logActivity({module:mod.label, action:'Status changed', detail:`${label}: ${prevStatus||'—'} → ${record[mod.statusField]}`});
+  }
   saveAll();
   closeModal();
   toast(id? 'Record updated.' : 'Record created.');
@@ -1219,25 +1612,46 @@ function renderAttachmentsModal(atts){
       ${atts.length ? atts.map(a=>`
         <div class="attach-chip">
           <span class="an">&#128206; ${escapeHtml(a.name)}</span>
-          <a href="${a.dataUrl}" target="_blank" rel="noopener" download="${escapeHtml(a.name)}">View / Download</a>
+          <a onclick="openAttachmentFile('${a.id}')" style="cursor:pointer;">View / Download</a>
         </div>`).join('') : `<div class="field-hint">No documents attached to this record.</div>`}
     </div>
     <div class="modal-foot"><div></div><button class="btn btn-primary" onclick="closeModal()">Close</button></div>
   `;
 }
+async function openAttachmentFile(id){
+  try{
+    const rec = await idbGet(id);
+    if(!rec){ toast('Attachment not found — it may have been removed during a storage cleanup.', true); return; }
+    const w = window.open();
+    if(w){ w.document.title = rec.name; w.location.href = rec.dataUrl; }
+    else{ const a=document.createElement('a'); a.href=rec.dataUrl; a.download=rec.name; document.body.appendChild(a); a.click(); a.remove(); }
+  }catch(e){ toast('Could not open attachment — local file storage may be unavailable in this browser.', true); }
+}
 function deleteRecord(moduleKey, id){
-  if(!confirm('Delete this record? This cannot be undone.')) return;
   const mod = MODULES[moduleKey];
-  DATA[mod.dataKey] = DATA[mod.dataKey].filter(r=>r.id!==id);
+  const idx = DATA[mod.dataKey].findIndex(r=>r.id===id);
+  if(idx===-1) return;
+  const removed = DATA[mod.dataKey][idx];
+  const labelField = mod.columns[0] ? mod.columns[0].key : 'id';
+  const label = String(removed[labelField]||removed.id).slice(0,60);
+  DATA[mod.dataKey].splice(idx,1);
+  logActivity({module:mod.label, action:'Deleted', detail:label});
   saveAll();
-  toast('Record deleted.');
+  toast('Record deleted.', false, ()=>{
+    DATA[mod.dataKey].splice(idx,0,removed);
+    saveAll(); toast('Restored.');
+    renderTopbar(); renderSidebar(); renderPage();
+  });
   renderTopbar(); renderSidebar(); renderPage();
 }
 function quickSetStatus(moduleKey, id, status){
   const mod = MODULES[moduleKey];
   const r = DATA[mod.dataKey].find(x=>x.id===id);
   if(!r) return;
+  const prev = r[mod.statusField];
   r[mod.statusField] = status;
+  const labelField = mod.columns[0] ? mod.columns[0].key : 'id';
+  logActivity({module:mod.label, action:'Status changed', detail:`${String(r[labelField]||r.id).slice(0,60)}: ${prev||'—'} → ${status}`});
   saveAll();
   toast(`Status updated to "${status}".`);
   renderTopbar(); renderSidebar(); renderPage();
@@ -1593,6 +2007,7 @@ function renderMeetingsPage(type){
       <div><h1>${type==='Board'?'Board Meetings':'Committee Meetings'}</h1><div class="sub">${type==='Board'?'Register of board meetings — notices, agendas, attendance and voting.':'Register of committee meetings across the Audit, NRC, Stakeholder and other committees.'}</div></div>
       <div class="page-head-actions">
         <button class="btn btn-ghost" onclick="exportMeetingsCsv('${type}')">&#8681; Export CSV</button>
+        <button class="btn btn-ghost" onclick="exportMeetingsIcs('${type}')">&#128197; Export .ics</button>
         <button class="btn btn-primary" onclick="openMeetingForm(null,'${type}')">+ Schedule Meeting</button>
       </div>
     </div>
@@ -1628,7 +2043,7 @@ function openMeetingForm(id, defaultType){
           <div class="attach-field">
             <div class="attach-list" id="attachList">${renderAttachList()}</div>
             <input type="file" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" onchange="handleAttachInput(this)">
-            <div class="field-hint">Photos, scans, PDFs or Office files — up to 2MB each. Stored in this browser only.</div>
+            <div class="field-hint">Photos, scans, PDFs or Office files — up to 8MB each. Stored locally in this browser's file storage.</div>
           </div>
         </div>
       </div>
@@ -1653,9 +2068,16 @@ function saveMeeting(evt, id){
   return false;
 }
 function deleteMeeting(id){
-  if(!confirm('Delete this meeting record?')) return;
-  DATA.meetings = DATA.meetings.filter(m=>m.id!==id);
-  saveAll(); toast('Meeting deleted.');
+  const idx = DATA.meetings.findIndex(m=>m.id===id);
+  if(idx===-1) return;
+  const removed = DATA.meetings[idx];
+  DATA.meetings.splice(idx,1);
+  logActivity({module:'Meetings', action:'Deleted', detail:removed.number});
+  saveAll();
+  toast('Meeting deleted.', false, ()=>{
+    DATA.meetings.splice(idx,0,removed); saveAll(); toast('Restored.');
+    renderTopbar(); renderSidebar(); renderPage();
+  });
   renderTopbar(); renderSidebar(); renderPage();
 }
 function exportMeetingsCsv(type){
@@ -1675,7 +2097,11 @@ function renderCalendarPage(){
   return `
     <div class="page-head">
       <div><h1>Compliance Calendar</h1><div class="sub">Statutory and governance deadlines, with reminders and completion tracking.</div></div>
-      <div class="page-head-actions"><button class="btn btn-primary" onclick="openCalendarEventForm(null)">+ Add Compliance Event</button></div>
+      <div class="page-head-actions">
+        <button class="btn btn-ghost" onclick="exportCalendarEventsIcs()">&#128197; Export .ics</button>
+        <button class="btn btn-ghost" onclick="openStatutoryCalendarGenerator()">&#9889; Generate Statutory Deadlines</button>
+        <button class="btn btn-primary" onclick="openCalendarEventForm(null)">+ Add Compliance Event</button>
+      </div>
     </div>
     <div class="table-wrap">
       <table>
@@ -1720,7 +2146,7 @@ function openCalendarEventForm(id){
           <div class="attach-field">
             <div class="attach-list" id="attachList">${renderAttachList()}</div>
             <input type="file" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" onchange="handleAttachInput(this)">
-            <div class="field-hint">Photos, scans, PDFs or Office files — up to 2MB each. Stored in this browser only.</div>
+            <div class="field-hint">Photos, scans, PDFs or Office files — up to 8MB each. Stored locally in this browser's file storage.</div>
           </div>
         </div>
       </div>
@@ -1753,9 +2179,61 @@ function toggleCalendarEvent(id){
   renderTopbar(); renderSidebar(); renderPage();
 }
 function deleteCalendarEvent(id){
-  if(!confirm('Delete this compliance event?')) return;
-  DATA.complianceEvents = DATA.complianceEvents.filter(e=>e.id!==id);
-  saveAll(); toast('Event deleted.');
+  const idx = DATA.complianceEvents.findIndex(e=>e.id===id);
+  if(idx===-1) return;
+  const removed = DATA.complianceEvents[idx];
+  DATA.complianceEvents.splice(idx,1);
+  logActivity({module:'Compliance Calendar', action:'Deleted', detail:removed.title});
+  saveAll();
+  toast('Event deleted.', false, ()=>{
+    DATA.complianceEvents.splice(idx,0,removed); saveAll(); toast('Restored.');
+    renderTopbar(); renderSidebar(); renderPage();
+  });
+  renderTopbar(); renderSidebar(); renderPage();
+}
+
+/* ---- Statutory deadline templates ---- */
+function openStatutoryCalendarGenerator(){
+  const today = new Date();
+  const defaultFYEnd = today.getMonth()>=3 ? `${today.getFullYear()+1}-03-31` : `${today.getFullYear()}-03-31`;
+  showModal(`
+    <div class="modal-head"><h3>Generate Statutory Deadlines</h3><button class="modal-close" onclick="closeModal()">&#10005;</button></div>
+    <div class="field-hint" style="margin-bottom:10px;">Creates the commonly cited SEBI LODR / Companies Act recurring deadlines for one financial year (quarterly results, governance/shareholding filings, AGM, MBP-1/DIR-8, DIR-3 KYC, secretarial audit). Existing events with the same title and date are skipped.</div>
+    <div class="form-field"><label>Financial Year End Date</label><input type="date" id="fyEndInput" value="${defaultFYEnd}"></div>
+    <div class="modal-foot"><div></div><div style="display:flex; gap:8px;"><button type="button" class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="generateStatutoryCalendar(document.getElementById('fyEndInput').value)">Generate</button></div></div>
+  `);
+}
+function generateStatutoryCalendar(fyEndStr){
+  if(!fyEndStr){ toast('Pick a financial year end date first.', true); return; }
+  const fyEnd = new Date(fyEndStr+'T00:00:00');
+  const addM = (date, months)=>{ const d = new Date(date); d.setMonth(d.getMonth()+months); return d; };
+  const addD = (date, days)=>{ const d = new Date(date); d.setDate(d.getDate()+days); return d; };
+  const iso = (d)=> d.toISOString().slice(0,10);
+  const qEnds = [ addM(fyEnd,-9), addM(fyEnd,-6), addM(fyEnd,-3), fyEnd ];
+  const templates = [];
+  qEnds.forEach((q,i)=>{
+    templates.push({ title:`Q${i+1} Financial Results — Regulation 33`, area:'SEBI LODR Regulations', date: iso(addD(q, i===3?60:45)), reminderDays:5 });
+    templates.push({ title:`Q${i+1} Corporate Governance Report — Regulation 27(2)`, area:'SEBI LODR Regulations', date: iso(addD(q,21)), reminderDays:5 });
+    templates.push({ title:`Q${i+1} Shareholding Pattern — Regulation 31`, area:'SEBI LODR Regulations', date: iso(addD(q,21)), reminderDays:5 });
+  });
+  templates.push({ title:'AGM (within 6 months of FY end)', area:'Companies Act, 2013', date: iso(addM(fyEnd,6)), reminderDays:14 });
+  templates.push({ title:'MBP-1 Declaration — First Board Meeting of FY', area:'Companies Act, 2013', date: iso(addD(fyEnd,30)), reminderDays:7 });
+  templates.push({ title:'DIR-8 Declaration — First Board Meeting of FY', area:'Companies Act, 2013', date: iso(addD(fyEnd,30)), reminderDays:7 });
+  templates.push({ title:'DIR-3 KYC Annual Filing', area:'Companies Act, 2013', date: `${fyEnd.getFullYear()}-09-30`, reminderDays:14 });
+  templates.push({ title:'Secretarial Audit Report (MR-3)', area:'Companies Act, 2013', date: iso(addM(fyEnd,4)), reminderDays:10 });
+  templates.push({ title:'CSR Spending & Annual Report Disclosure', area:'Companies Act, 2013', date: iso(addM(fyEnd,4)), reminderDays:10 });
+
+  let added = 0;
+  templates.forEach(t=>{
+    const exists = DATA.complianceEvents.some(e=>e.title===t.title && e.dueDate===t.date);
+    if(!exists){
+      DATA.complianceEvents.push({ id: uid('ce'), title:t.title, area:t.area, dueDate:t.date, reminderDays:t.reminderDays, completed:false, notes:'Auto-generated from statutory calendar template — verify against current regulations.' });
+      added++;
+    }
+  });
+  logActivity({module:'Compliance Calendar', action:'Generated', detail:`${added} statutory deadline(s) for FY ending ${fyEndStr}`});
+  saveAll(); closeModal();
+  toast(`${added} deadline(s) added. ${templates.length-added} already existed.`);
   renderTopbar(); renderSidebar(); renderPage();
 }
 
@@ -1841,16 +2319,26 @@ function renderResponsibilitiesPage(){
 function updateResponsibility(id, field, value){
   const r = DATA.irChecklist.find(x=>x.id===id);
   if(!r) return;
+  const prev = r[field];
   r[field] = value;
+  if(field==='status' && prev!==value){
+    logActivity({module:'Roles & Responsibilities', action:'Status changed', detail:`${r.item.slice(0,60)}: ${prev} → ${value}`});
+  }
   saveAll();
   renderTopbar(); renderSidebar();
   // Re-render just the summary/score area without losing focus on other inputs unnecessarily:
   renderPage();
 }
 function deleteResponsibility(id){
-  if(!confirm('Remove this responsibility item from your checklist?')) return;
-  DATA.irChecklist = DATA.irChecklist.filter(r=>r.id!==id);
-  saveAll(); toast('Item removed.');
+  const idx = DATA.irChecklist.findIndex(r=>r.id===id);
+  if(idx===-1) return;
+  const removed = DATA.irChecklist[idx];
+  DATA.irChecklist.splice(idx,1);
+  saveAll();
+  toast('Item removed.', false, ()=>{
+    DATA.irChecklist.splice(idx,0,removed); saveAll(); toast('Restored.');
+    renderTopbar(); renderSidebar(); renderPage();
+  });
   renderTopbar(); renderSidebar(); renderPage();
 }
 function openAddResponsibility(){
@@ -2122,6 +2610,38 @@ function checkCoverage(){
 /* =========================================================================
    Reports & Documents
    ========================================================================= */
+/* =========================================================================
+   Activity Log
+   ========================================================================= */
+function renderActivityLogPage(){
+  const log = DATA.activityLog || [];
+  return `
+    <div class="page-head">
+      <div><h1>Activity Log</h1><div class="sub">A running record of record creation, status changes and deletions across this app.</div></div>
+      <div class="page-head-actions"><button class="btn btn-ghost" onclick="exportActivityLogCsv()">&#8681; Export CSV</button></div>
+    </div>
+    ${log.length? `<div class="table-wrap"><table>
+      <thead><tr><th>When</th><th>Module</th><th>Action</th><th>Detail</th></tr></thead>
+      <tbody>
+        ${log.slice(0,200).map(l=>`<tr>
+          <td class="small-muted">${new Date(l.ts).toLocaleString('en-IN')}</td>
+          <td>${escapeHtml(l.module)}</td>
+          <td><span class="pill ${l.action==='Deleted'?'pill-red':l.action==='Created'?'pill-green':'pill-blue'}">${escapeHtml(l.action)}</span></td>
+          <td>${escapeHtml(l.detail||'')}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table></div>` : `<div class="empty-state"><div class="ei">&#128203;</div><div class="et">No activity recorded yet</div><div class="ed">Changes you make across the app will appear here.</div></div>`}
+  `;
+}
+function exportActivityLogCsv(){
+  const rows = DATA.activityLog || [];
+  if(!rows.length){ toast('No activity to export.', true); return; }
+  const headers = ['ts','module','action','detail'];
+  const lines = [headers.join(',')];
+  rows.forEach(r=> lines.push(headers.map(h=>`"${String(r[h]||'').replace(/"/g,'""')}"`).join(',')));
+  downloadFile(`activity_log_${new Date().toISOString().slice(0,10)}.csv`, lines.join('\n'), 'text/csv');
+}
+
 function renderReportsPage(){
   const reports = [
     {key:'complianceAreas', label:'Governance Scorecard', desc:'Category-wise compliance scores and pending matters.'},
@@ -2131,9 +2651,15 @@ function renderReportsPage(){
     {key:'disclosures', label:'Disclosures & Declarations', desc:'Statutory declaration filing and validity status.'},
     {key:'rpts', label:'Related-Party Transactions Register', desc:'All proposed and approved RPTs.'},
     {key:'irChecklist', label:'Roles & Responsibilities Checklist', desc:'Self-assessed status against every tracked director obligation.'},
+    {key:'csr', label:'CSR Obligations', desc:'Schedule VII project budgets, spend and status.'},
+    {key:'directorships', label:'Directorship Register', desc:'Every board/entity you serve on, for SEBI/Companies Act limit tracking.'},
+    {key:'activityLog', label:'Activity Log', desc:'Full history of record changes across the app.'},
   ];
   return `
-    <div class="page-head"><div><h1>Governance Reports</h1><div class="sub">Download CSV exports of any register for offline review or board circulation.</div></div></div>
+    <div class="page-head">
+      <div><h1>Governance Reports</h1><div class="sub">Download CSV exports of any register for offline review or board circulation.</div></div>
+      <div class="page-head-actions"><button class="btn btn-primary" onclick="printGovernanceReport()">&#128424; Print / Save as PDF — Full Report</button></div>
+    </div>
     <div class="grid g-3">
       ${reports.map(r=>`
         <div class="card">
@@ -2153,12 +2679,83 @@ function exportGenericCsv(key){
   downloadFile(`${key}_${new Date().toISOString().slice(0,10)}.csv`, lines.join('\n'), 'text/csv');
 }
 
+/* ---- Print / Save-as-PDF Governance Report (browser print, no library) ---- */
+function printGovernanceReport(){
+  const score = governanceScore();
+  const irS = irScore();
+  const alerts = buildAlerts().slice(0,10);
+  const dstats = directorshipStats();
+  const html = `
+    <h1 style="font-size:20px; margin-bottom:2px;">${escapeHtml(DATA.company.name)} — Governance Status Report</h1>
+    <div style="font-size:12px; color:#555; margin-bottom:18px;">Prepared for: ${escapeHtml(DATA.director.name)}, ${escapeHtml(DATA.director.designation)} · ${new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'})}</div>
+    <h2 style="font-size:14px; margin:16px 0 6px;">Scores</h2>
+    <p style="font-size:12.5px;">Governance Score: <strong>${score}/100</strong> &nbsp;·&nbsp; Responsibilities Fulfilment: <strong>${irS}/100</strong></p>
+    <h2 style="font-size:14px; margin:16px 0 6px;">Directorship Limits</h2>
+    <p style="font-size:12.5px;">Listed directorships: <strong>${dstats.listedCount}/7</strong> &nbsp; Total directorships: <strong>${dstats.totalCount}/20</strong> &nbsp; Committee memberships: <strong>${dstats.committeeMemberships}/10</strong> &nbsp; Chairpersonships: <strong>${dstats.chairCount}/5</strong></p>
+    <h2 style="font-size:14px; margin:16px 0 6px;">Priority Items (Top 10)</h2>
+    <ul style="font-size:12.5px; padding-left:18px;">${alerts.length? alerts.map(a=>`<li>[${a.priority.toUpperCase()}] ${escapeHtml(a.title)} ${a.meta?'— '+escapeHtml(a.meta):''}</li>`).join('') : '<li>No open priority items.</li>'}</ul>
+    <h2 style="font-size:14px; margin:16px 0 6px;">Open Items by Module</h2>
+    <ul style="font-size:12.5px; padding-left:18px;">
+      <li>Action items open: ${DATA.actionItems.filter(a=>a.status!=='Completed').length}</li>
+      <li>Disclosures pending: ${DATA.disclosures.filter(d=>d.status!=='Filed').length}</li>
+      <li>Audit observations open: ${DATA.auditObservations.filter(a=>a.status!=='Closed').length}</li>
+      <li>RPTs pending approval: ${DATA.rpts.filter(r=>r.status==='Pending Approval'||r.status==='Proposed').length}</li>
+      <li>CSR projects in progress: ${(DATA.csr||[]).filter(c=>c.status!=='Completed').length}</li>
+    </ul>
+    <p style="font-size:10.5px; color:#888; margin-top:20px;">Generated locally by DirectorDesk on ${new Date().toLocaleString('en-IN')}. Verify all figures independently before circulation — this is a self-maintained tool, not an audited compliance record.</p>
+  `;
+  const area = document.getElementById('printReportArea');
+  if(!area){ toast('Print area not available.', true); return; }
+  area.innerHTML = html;
+  document.body.classList.add('printing-report');
+  window.print();
+  setTimeout(()=>{ document.body.classList.remove('printing-report'); area.innerHTML=''; }, 600);
+}
+
+/* ---- ICS calendar export (no library — hand-built .ics) ---- */
+function toICSDate(dateStr, timeStr){
+  const d = (dateStr||'').replace(/-/g,'');
+  if(timeStr){ return `${d}T${timeStr.replace(':','')}00`; }
+  return d;
+}
+function generateICS(events){
+  let ics = `BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//DirectorDesk//EN\r\nCALSCALE:GREGORIAN\r\n`;
+  events.forEach(e=>{
+    if(!e.date) return;
+    ics += `BEGIN:VEVENT\r\nUID:${e.uid}\r\nDTSTAMP:${toICSDate(new Date().toISOString().slice(0,10))}T000000Z\r\n`;
+    if(e.time){ ics += `DTSTART:${toICSDate(e.date,e.time)}\r\n`; }
+    else{ ics += `DTSTART;VALUE=DATE:${toICSDate(e.date)}\r\nDTEND;VALUE=DATE:${toICSDate(e.date)}\r\n`; }
+    ics += `SUMMARY:${(e.title||'').replace(/[\r\n]/g,' ')}\r\n`;
+    if(e.desc) ics += `DESCRIPTION:${String(e.desc).replace(/[\r\n]/g,' ')}\r\n`;
+    if(e.reminderDays) ics += `BEGIN:VALARM\r\nACTION:DISPLAY\r\nDESCRIPTION:Reminder\r\nTRIGGER:-P${e.reminderDays}D\r\nEND:VALARM\r\n`;
+    ics += `END:VEVENT\r\n`;
+  });
+  ics += `END:VCALENDAR\r\n`;
+  return ics;
+}
+function exportCalendarEventsIcs(){
+  const events = DATA.complianceEvents.map(e=>({uid:e.id+'@directordesk', date:e.dueDate, title:e.title, desc:e.notes, reminderDays:e.reminderDays}));
+  if(!events.length){ toast('No events to export.', true); return; }
+  downloadFile(`compliance_calendar_${new Date().toISOString().slice(0,10)}.ics`, generateICS(events), 'text/calendar');
+}
+function exportMeetingsIcs(type){
+  const events = DATA.meetings.filter(m=>m.type===type).map(m=>({uid:m.id+'@directordesk', date:m.date, time:m.time, title:m.number, desc:m.venue}));
+  if(!events.length){ toast('No meetings to export.', true); return; }
+  downloadFile(`${type.toLowerCase()}_meetings_${new Date().toISOString().slice(0,10)}.ics`, generateICS(events), 'text/calendar');
+}
+
 /* =========================================================================
    Settings
    ========================================================================= */
 function renderSettingsPage(){
+  const storage = storageUsageInfo();
+  const storagePct = Math.min(100, Math.round((storage.totalMB/5)*100));
+  const storageColor = storagePct>=85?'var(--red)':storagePct>=60?'var(--amber)':'var(--green)';
+  const backups = listBackups();
+  const ai = DATA.aiConfig || {apiKey:'', model:'claude-sonnet-4-6', enabled:false};
+  const sec = DATA.security || {pinHash:null, pinEnabled:false};
   return `
-    <div class="page-head"><div><h1>Settings</h1><div class="sub">Company profile, director details and demo data controls.</div></div></div>
+    <div class="page-head"><div><h1>Settings</h1><div class="sub">Company profile, security, backups, AI integration and data controls.</div></div></div>
     <div class="grid g-2">
       <div class="card">
         <div class="card-title">Company Profile</div>
@@ -2167,22 +2764,80 @@ function renderSettingsPage(){
             <div class="form-field full"><label>Company Name</label><input type="text" name="name" value="${escapeHtml(DATA.company.name)}"></div>
             <div class="form-field full"><label>CIN</label><input type="text" name="cin" value="${escapeHtml(DATA.company.cin)}"></div>
             <div class="form-field full"><label>Listing Status</label><input type="text" name="listing" value="${escapeHtml(DATA.company.listing)}"></div>
+            <div class="form-field"><label>Annual Turnover (₹, optional)</label><input type="number" name="annualTurnover" value="${DATA.company.annualTurnover||''}" placeholder="For RPT materiality (Reg 23)"></div>
             <div class="form-field full"><label>Director Name</label><input type="text" name="dname" value="${escapeHtml(DATA.director.name)}"></div>
             <div class="form-field full"><label>Designation</label><input type="text" name="ddesig" value="${escapeHtml(DATA.director.designation)}"></div>
           </div>
           <button class="btn btn-primary mt16" type="submit">Save Profile</button>
         </form>
       </div>
+
       <div class="card">
-        <div class="card-title">Demo Data</div>
-        <div class="card-sub mt8">All data is stored locally in this browser via localStorage. Nothing is sent to a server.</div>
+        <div class="card-title">Security — Local PIN Lock</div>
+        <div class="card-sub mt8">A local deterrent only — it does not encrypt your data, and does not protect against someone with technical access to this device or file.</div>
+        ${sec.pinEnabled ? `
+          <div class="mt16" style="display:flex; flex-direction:column; gap:10px;">
+            <div class="pill pill-green" style="align-self:flex-start;">PIN lock is ON</div>
+            <button class="btn btn-ghost" onclick="openChangePinForm()">Change PIN</button>
+            <button class="btn btn-ghost" onclick="lockNow()">Lock Now</button>
+            <button class="btn btn-danger" onclick="openRemovePinForm()">Remove PIN</button>
+          </div>` : `
+          <div class="mt16">
+            <button class="btn btn-primary" onclick="openSetPinForm()">Set a PIN</button>
+          </div>`}
+      </div>
+    </div>
+
+    <div class="grid g-2 mt16">
+      <div class="card">
+        <div class="card-title">Storage & Backups</div>
+        <div class="card-sub mt8">Records data: ${storage.totalMB.toFixed(2)} MB used (browsers typically allow ~5–10 MB for this kind of storage; varies by browser). Attachments are stored separately in this browser's file storage, which usually has far more headroom.</div>
+        <div class="progress-track mt8"><div class="progress-fill" style="width:${storagePct}%; background:${storageColor};"></div></div>
         <div class="mt16" style="display:flex; flex-direction:column; gap:10px;">
-          <button class="btn btn-ghost" onclick="importDataPrompt()">&#8593; Import Records (JSON)</button>
-          <button class="btn btn-ghost" onclick="exportAllData()">&#8681; Export All Records (JSON)</button>
+          <button class="btn btn-ghost" onclick="cleanupOrphanedAttachments()">&#129529; Clean Up Unreferenced Attachments</button>
+        </div>
+        ${backups.length? `
+          <div class="mt16">
+            <div class="small-muted" style="margin-bottom:8px;">Automatic daily backups (last ${backups.length}):</div>
+            ${backups.slice().reverse().map(b=>`
+              <div class="flex-between mt8">
+                <span class="small-muted">${b.date}</span>
+                <button class="btn btn-sm btn-ghost" onclick="restoreBackup('${b.date}')">Restore</button>
+              </div>`).join('')}
+          </div>` : `<div class="field-hint mt12">No automatic backups yet — one is taken once per day when you open the app.</div>`}
+      </div>
+
+      <div class="card">
+        <div class="card-title">Data Import / Export</div>
+        <div class="card-sub mt8">Full backup includes all records and attachments (via a local file storage export).</div>
+        <div class="mt16" style="display:flex; flex-direction:column; gap:10px;">
+          <button class="btn btn-ghost" onclick="importDataPrompt()">&#8593; Import Full Backup (JSON)</button>
+          <button class="btn btn-ghost" onclick="exportAllData()">&#8681; Export Full Backup (JSON)</button>
           <button class="btn btn-danger" onclick="resetDemoData()">&#8635; Reset Demo Data</button>
         </div>
       </div>
     </div>
+
+    <div class="card mt16">
+      <div class="card-title">AI Integration — Bring Your Own API Key</div>
+      <div class="card-sub mt8" style="line-height:1.6;">
+        Add your own Anthropic API key to make the Governance AI Assistant use real Claude instead of local demo logic.
+        <strong style="color:var(--amber);">Important:</strong> this key is stored only in this browser and is sent directly from your browser to Anthropic's servers with every request — it is not routed through any backend of ours. Anyone with access to this device, or to network traffic on it, could see it. Treat it like a password; don't use this on a shared or public computer.
+        Some browsers or networks block this kind of direct request — if so, the assistant automatically falls back to local demo mode.
+        Usage is billed to your own Anthropic account; check <span style="color:var(--blue);">console.anthropic.com</span> for current pricing and any starter credit for new accounts.
+      </div>
+      <div class="form-grid mt16">
+        <div class="form-field full"><label>Anthropic API Key</label><input type="password" id="aiApiKeyInput" value="${escapeHtml(ai.apiKey||'')}" placeholder="sk-ant-..."></div>
+        <div class="form-field"><label>Model</label><input type="text" id="aiModelInput" value="${escapeHtml(ai.model||'claude-sonnet-4-6')}"></div>
+        <div class="form-field"><label>Enable Live AI</label><select id="aiEnabledInput"><option value="true" ${ai.enabled?'selected':''}>Enabled</option><option value="false" ${!ai.enabled?'selected':''}>Disabled</option></select></div>
+      </div>
+      <div class="mt16" style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="saveAIConfig()">Save AI Settings</button>
+        <button class="btn btn-ghost" onclick="testAIConnection()">Test Connection</button>
+        <button class="btn btn-danger" onclick="clearAIConfig()">Clear Key</button>
+      </div>
+    </div>
+
     <div class="card mt16">
       <div class="card-title">Statutory & Legal Disclaimer</div>
       <div class="card-sub mt8">DirectorDesk is a prototype governance management tool built to help independent directors organise compliance information. Statutory deadlines, trading window dates and regulatory requirements shown are configurable illustrative entries and must be independently verified against applicable provisions of the Companies Act, 2013, SEBI LODR Regulations, SEBI Insider Trading Regulations and other applicable law. This application does not constitute legal advice. For production use with confidential board papers, add secure authentication, a server-side database, access controls and a verified regulatory-update feed.</div>
@@ -2196,14 +2851,90 @@ function saveCompanySettings(evt){
   DATA.company.name = f.elements.name.value;
   DATA.company.cin = f.elements.cin.value;
   DATA.company.listing = f.elements.listing.value;
+  DATA.company.annualTurnover = f.elements.annualTurnover.value ? Number(f.elements.annualTurnover.value) : undefined;
   DATA.director.name = f.elements.dname.value;
   DATA.director.designation = f.elements.ddesig.value;
   saveAll(); toast('Profile updated.');
   renderTopbar(); renderSidebar(); renderPage();
   return false;
 }
+
+/* ---- AI config ---- */
+function saveAIConfig(){
+  DATA.aiConfig = DATA.aiConfig || {};
+  DATA.aiConfig.apiKey = document.getElementById('aiApiKeyInput').value.trim();
+  DATA.aiConfig.model = document.getElementById('aiModelInput').value.trim() || 'claude-sonnet-4-6';
+  DATA.aiConfig.enabled = document.getElementById('aiEnabledInput').value === 'true';
+  saveAll();
+  toast('AI settings saved.');
+}
+function clearAIConfig(){
+  if(!confirm('Remove your saved API key from this browser?')) return;
+  DATA.aiConfig = { apiKey:'', model:'claude-sonnet-4-6', enabled:false };
+  saveAll(); toast('API key cleared.'); renderPage();
+}
+
+/* ---- Security / PIN ---- */
+function openSetPinForm(){
+  showModal(`
+    <div class="modal-head"><h3>Set a PIN</h3><button class="modal-close" onclick="closeModal()">&#10005;</button></div>
+    <div class="form-field"><label>New PIN (4–8 digits)</label><input type="password" inputmode="numeric" id="newPin1" maxlength="8"></div>
+    <div class="form-field mt12"><label>Confirm PIN</label><input type="password" inputmode="numeric" id="newPin2" maxlength="8"></div>
+    <div class="modal-foot"><div></div><div style="display:flex; gap:8px;"><button type="button" class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="confirmSetPin()">Save PIN</button></div></div>
+  `);
+}
+function confirmSetPin(){
+  const p1 = document.getElementById('newPin1').value;
+  const p2 = document.getElementById('newPin2').value;
+  if(p1.length<4){ toast('PIN must be at least 4 digits.', true); return; }
+  if(p1!==p2){ toast('PINs do not match.', true); return; }
+  DATA.security = { pinHash: simpleHash(p1), pinEnabled: true };
+  sessionStorage.setItem('idgos_unlocked','1');
+  saveAll(); closeModal(); toast('PIN set.');
+  renderPage();
+}
+function openChangePinForm(){
+  showModal(`
+    <div class="modal-head"><h3>Change PIN</h3><button class="modal-close" onclick="closeModal()">&#10005;</button></div>
+    <div class="form-field"><label>Current PIN</label><input type="password" inputmode="numeric" id="curPin" maxlength="8"></div>
+    <div class="form-field mt12"><label>New PIN</label><input type="password" inputmode="numeric" id="newPin1" maxlength="8"></div>
+    <div class="form-field mt12"><label>Confirm New PIN</label><input type="password" inputmode="numeric" id="newPin2" maxlength="8"></div>
+    <div class="modal-foot"><div></div><div style="display:flex; gap:8px;"><button type="button" class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="confirmChangePin()">Save</button></div></div>
+  `);
+}
+function confirmChangePin(){
+  const cur = document.getElementById('curPin').value;
+  const p1 = document.getElementById('newPin1').value;
+  const p2 = document.getElementById('newPin2').value;
+  if(simpleHash(cur)!==DATA.security.pinHash){ toast('Current PIN is incorrect.', true); return; }
+  if(p1.length<4){ toast('New PIN must be at least 4 digits.', true); return; }
+  if(p1!==p2){ toast('New PINs do not match.', true); return; }
+  DATA.security.pinHash = simpleHash(p1);
+  saveAll(); closeModal(); toast('PIN changed.');
+}
+function openRemovePinForm(){
+  showModal(`
+    <div class="modal-head"><h3>Remove PIN</h3><button class="modal-close" onclick="closeModal()">&#10005;</button></div>
+    <div class="form-field"><label>Enter current PIN to confirm</label><input type="password" inputmode="numeric" id="curPin" maxlength="8"></div>
+    <div class="modal-foot"><div></div><div style="display:flex; gap:8px;"><button type="button" class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn btn-danger" onclick="confirmRemovePin()">Remove PIN</button></div></div>
+  `);
+}
+function confirmRemovePin(){
+  const cur = document.getElementById('curPin').value;
+  if(simpleHash(cur)!==DATA.security.pinHash){ toast('Incorrect PIN.', true); return; }
+  DATA.security = { pinHash:null, pinEnabled:false };
+  saveAll(); closeModal(); toast('PIN removed.');
+  renderPage();
+}
+
 function exportAllData(){
-  downloadFile(`idgos_backup_${new Date().toISOString().slice(0,10)}.json`, JSON.stringify(DATA,null,2), 'application/json');
+  idbGetAll().then(files=>{
+    const payload = Object.assign({}, DATA, { __attachmentFiles: files });
+    downloadFile(`directordesk_backup_${new Date().toISOString().slice(0,10)}.json`, JSON.stringify(payload,null,2), 'application/json');
+  }).catch(()=>{
+    downloadFile(`directordesk_backup_${new Date().toISOString().slice(0,10)}.json`, JSON.stringify(DATA,null,2), 'application/json');
+    toast('Exported records — attachments could not be included (local file storage unavailable).', true);
+  });
 }
 function importDataPrompt(){
   const input = document.createElement('input');
@@ -2212,13 +2943,18 @@ function importDataPrompt(){
     const file = input.files[0];
     if(!file) return;
     const reader = new FileReader();
-    reader.onload = ()=>{
+    reader.onload = async ()=>{
       try{
         const parsed = JSON.parse(reader.result);
         if(!parsed || typeof parsed!=='object') throw new Error('Invalid file');
+        const files = parsed.__attachmentFiles || [];
+        delete parsed.__attachmentFiles;
         DATA = Object.assign(sampleDataShape(), parsed);
         saveAll();
-        toast('Data imported successfully.');
+        if(files.length){
+          for(const f of files){ try{ await idbPut(f.id, f.name, f.type, f.dataUrl); }catch(e){} }
+        }
+        toast('Data imported successfully.' + (files.length? ` (${files.length} attachment file(s) restored.)` : ''));
         renderTopbar(); renderSidebar(); renderPage();
       }catch(e){ toast('Import failed — invalid JSON file.', true); }
     };
@@ -2226,7 +2962,7 @@ function importDataPrompt(){
   };
   input.click();
 }
-function sampleDataShape(){ return {company:{},director:{},meetings:[],agendaItems:[],minutes:[],actionItems:[],complianceEvents:[],disclosures:[],auditObservations:[],rpts:[],erm:[],ifc:[],complianceAreas:[],irChecklist:[],meetingIntel:[]}; }
+function sampleDataShape(){ return {company:{},director:{},meetings:[],agendaItems:[],minutes:[],actionItems:[],complianceEvents:[],disclosures:[],auditObservations:[],rpts:[],erm:[],ifc:[],complianceAreas:[],irChecklist:[],meetingIntel:[],csr:[],directorships:[],activityLog:[],aiConfig:{apiKey:'',model:'claude-sonnet-4-6',enabled:false},security:{pinHash:null,pinEnabled:false}}; }
 function resetDemoData(){
   if(!confirm('This will replace ALL current records with fresh sample data. Continue?')) return;
   DATA = sampleData();
@@ -2259,22 +2995,28 @@ function openQuickAdd(){
 }
 
 /* =========================================================================
-   Governance AI Assistant — demo mode (local, rule-based; no external API)
+   Governance AI Assistant — local demo mode by default; optional Live AI
+   via a user-supplied Anthropic API key (see Settings → AI Integration).
    ========================================================================= */
 let AI_HISTORY = [
-  {role:'bot', text:"Hello, I'm the Governance AI Assistant, running in demo mode. I can search your records, summarise pending items, and explain general governance requirements using the data already in this workspace.\n\nDemo-mode responses are generated locally from your records and general knowledge — they are not verified legal advice. Try one of the suggestions below, or ask a question."}
+  {role:'bot', text:"Hello, I'm the Governance AI Assistant, running in demo mode. I can search your records, summarise pending items, and explain general governance requirements using the data already in this workspace.\n\nDemo-mode responses are generated locally from your records and general knowledge — they are not verified legal advice. Try one of the suggestions below, or ask a question.\n\nWant real Claude-powered answers? Add your own API key in Settings → AI Integration."}
 ];
+let AI_LAST_MODE = 'demo';
 function toggleAI(open){
   document.getElementById('aiOverlay').classList.toggle('open', open);
   const drawer = document.getElementById('aiDrawer');
   if(open){ renderAIDrawer(); drawer.classList.add('open'); }
   else{ drawer.classList.remove('open'); }
 }
+function aiIsLiveConfigured(){
+  return !!(DATA.aiConfig && DATA.aiConfig.enabled && DATA.aiConfig.apiKey);
+}
 function renderAIDrawer(){
   const el = document.getElementById('aiDrawer');
+  const modeLabel = aiIsLiveConfigured() ? (AI_LAST_MODE==='live' ? 'LIVE AI' : 'LIVE AI (will try)') : 'DEMO MODE';
   el.innerHTML = `
     <div class="ai-head">
-      <div class="ttl">&#129302; Governance AI Assistant <span class="ai-mode">DEMO MODE</span></div>
+      <div class="ttl">&#129302; Governance AI Assistant <span class="ai-mode">${modeLabel}</span></div>
       <button class="modal-close" onclick="toggleAI(false)">&#10005;</button>
     </div>
     <div class="ai-msgs" id="aiMsgs">
@@ -2291,12 +3033,92 @@ function renderAIDrawer(){
   const msgs = document.getElementById('aiMsgs');
   if(msgs) msgs.scrollTop = msgs.scrollHeight;
 }
-function askAI(q){
+async function askAI(q){
   if(!q || !q.trim()) return;
   AI_HISTORY.push({role:'user', text:q});
-  const reply = generateAIReply(q.trim());
-  AI_HISTORY.push({role:'bot', text:reply});
   renderAIDrawer();
+  if(aiIsLiveConfigured()){
+    AI_HISTORY.push({role:'bot', text:'…thinking…', pending:true});
+    renderAIDrawer();
+    try{
+      const context = buildAIContextSummary();
+      const system = `You are the Governance AI Assistant inside DirectorDesk, a personal governance tracker for an Indian independent director. Answer briefly and concretely using the context below. If the question needs information not in the context, say so plainly rather than guessing. Do not give definitive legal advice; suggest verifying with the Company Secretary or legal counsel for anything statutory.\n\nCurrent workspace context:\n${context}`;
+      const reply = await callClaudeAPI(q.trim(), system);
+      AI_HISTORY.pop();
+      AI_HISTORY.push({role:'bot', text: reply || '(Empty response from the API.)'});
+      AI_LAST_MODE = 'live';
+    }catch(e){
+      AI_HISTORY.pop();
+      const fallback = generateAIReply(q.trim());
+      AI_HISTORY.push({role:'bot', text:`${fallback}\n\n(Local fallback — live AI request failed: ${String(e.message||e).slice(0,140)})`});
+      AI_LAST_MODE = 'demo';
+    }
+  } else {
+    const reply = generateAIReply(q.trim());
+    AI_HISTORY.push({role:'bot', text:reply});
+    AI_LAST_MODE = 'demo';
+  }
+  renderAIDrawer();
+}
+function buildAIContextSummary(){
+  const alerts = buildAlerts().slice(0,8);
+  const upcoming = DATA.meetings.filter(m=>m.date && daysUntil(m.date)>=0).sort((a,b)=>new Date(a.date)-new Date(b.date)).slice(0,3);
+  return [
+    `Company: ${DATA.company.name} (${DATA.company.listing})`,
+    `Director: ${DATA.director.name}, ${DATA.director.designation}`,
+    `Governance score: ${governanceScore()}/100. Responsibilities self-assessed fulfilment: ${irScore()}/100.`,
+    `Open action items: ${DATA.actionItems.filter(a=>a.status!=='Completed').length} (${countOverdueActions()} overdue).`,
+    `Disclosures not yet filed: ${DATA.disclosures.filter(d=>d.status!=='Filed').length}.`,
+    `Open audit observations: ${DATA.auditObservations.filter(a=>a.status!=='Closed').length}.`,
+    `RPTs pending approval: ${DATA.rpts.filter(r=>r.status==='Pending Approval'||r.status==='Proposed').length}.`,
+    `Upcoming meetings: ${upcoming.map(m=>`${m.number} on ${m.date}`).join('; ') || 'none scheduled'}.`,
+    `Top current alerts: ${alerts.map(a=>`[${a.priority}] ${a.title}`).join('; ') || 'none'}.`,
+  ].join('\n');
+}
+
+/* ---- Live AI API call (BYOK — see Settings) ---- */
+async function callClaudeAPI(userText, systemPrompt){
+  const key = DATA.aiConfig && DATA.aiConfig.apiKey;
+  if(!key) throw new Error('No API key configured.');
+  const model = (DATA.aiConfig && DATA.aiConfig.model) || 'claude-sonnet-4-6';
+  let resp;
+  try{
+    resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key': key,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 700,
+        system: systemPrompt || undefined,
+        messages: [{role:'user', content:userText}]
+      })
+    });
+  }catch(netErr){
+    throw new Error('Network/CORS error reaching Anthropic API — this browser or network may be blocking direct API calls.');
+  }
+  if(!resp.ok){
+    let detail = '';
+    try{ const errJson = await resp.json(); detail = errJson.error && errJson.error.message ? errJson.error.message : ''; }catch(e){}
+    throw new Error(`API error ${resp.status}${detail? ': '+detail : ''}`);
+  }
+  const data = await resp.json();
+  const textBlock = (data.content||[]).find(b=>b.type==='text');
+  return textBlock ? textBlock.text : '';
+}
+async function testAIConnection(){
+  if(!DATA.aiConfig.apiKey){ toast('Enter an API key first.', true); return; }
+  toast('Testing connection…');
+  try{
+    const reply = await callClaudeAPI('Reply with exactly: Connection successful.', 'You are a connection test. Follow the instruction exactly.');
+    toast('✓ Live AI connection works: ' + reply.slice(0,60));
+  }catch(e){
+    toast('Connection failed: ' + String(e.message||e).slice(0,120), true);
+  }
 }
 function generateAIReply(q){
   const ql = q.toLowerCase();
@@ -2363,12 +3185,69 @@ function generateAIReply(q){
 }
 
 /* =========================================================================
+   Security — local PIN lock (deterrent only, not encryption)
+   ========================================================================= */
+function simpleHash(str){
+  let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+  for(let i=0;i<str.length;i++){
+    const ch = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1>>>16), 2246822507) ^ Math.imul(h2 ^ (h2>>>13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2>>>16), 2246822507) ^ Math.imul(h1 ^ (h1>>>13), 3266489909);
+  return (4294967296 * (2097151 & h2) + (h1>>>0)).toString(16);
+}
+function isLocked(){
+  return !!(DATA.security && DATA.security.pinEnabled) && sessionStorage.getItem('idgos_unlocked')!=='1';
+}
+function renderLockScreen(errorMsg){
+  document.getElementById('app').style.display = 'none';
+  let overlay = document.getElementById('lockScreen');
+  if(!overlay){ overlay = document.createElement('div'); overlay.id = 'lockScreen'; document.body.appendChild(overlay); }
+  overlay.innerHTML = `
+    <div class="lock-card">
+      <div class="lock-mark">DD</div>
+      <div class="lock-title">DirectorDesk is locked</div>
+      <div class="lock-sub">Enter your PIN to continue.</div>
+      <input type="password" inputmode="numeric" id="lockPinInput" maxlength="8" placeholder="PIN" autofocus onkeydown="if(event.key==='Enter') attemptUnlock();">
+      ${errorMsg? `<div class="lock-error">${escapeHtml(errorMsg)}</div>` : ''}
+      <button class="btn btn-primary" style="width:100%; margin-top:12px;" onclick="attemptUnlock()">Unlock</button>
+      <div class="lock-hint">This PIN is a local deterrent stored only on this device — it does not encrypt your data.</div>
+    </div>
+  `;
+  setTimeout(()=>{ const i=document.getElementById('lockPinInput'); if(i) i.focus(); }, 50);
+}
+function attemptUnlock(){
+  const input = document.getElementById('lockPinInput');
+  const pin = input ? input.value : '';
+  if(simpleHash(pin) === DATA.security.pinHash){
+    sessionStorage.setItem('idgos_unlocked','1');
+    const overlay = document.getElementById('lockScreen');
+    if(overlay) overlay.remove();
+    document.getElementById('app').style.display = 'flex';
+    boot();
+  } else {
+    renderLockScreen('Incorrect PIN — try again.');
+  }
+}
+function lockNow(){
+  sessionStorage.removeItem('idgos_unlocked');
+  renderLockScreen();
+}
+
+/* =========================================================================
    Boot
    ========================================================================= */
-function init(){
+function boot(){
   renderSidebar();
   renderTopbar();
   renderPage();
+  maybeAutoBackup();
+}
+function init(){
+  if(isLocked()){ renderLockScreen(); return; }
+  boot();
 }
 init();
 </script>
