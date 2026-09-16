@@ -2458,8 +2458,8 @@ function renderMeetingIntelPage(){
       <div><h1>Agenda–Minutes Tracker</h1><div class="sub">Turn agenda items into a discussion checklist, then verify the minutes address every point.</div></div>
     </div>
     <div class="disclaimer-strip">
-      <span>&#9888;</span>
-      <span>Text files (.txt/.md) are read instantly in your browser. PDFs and photos need your Live AI key (Settings → AI Integration) to extract text, since reading scanned documents isn't something this app can do locally — everything then still runs through the same local keyword-matching coverage check. Always read the final minutes yourself before relying on this check.</span>
+      <span>&#128274;</span>
+      <span>Privacy by default: PDFs, photos and text files are all read <strong>locally in your browser</strong> using open-source tools (PDF.js for text, on-device OCR for scans/photos) — your document content is never uploaded anywhere. The only network activity is a one-time download of these tools themselves (not your data), the first time you use this feature. Coverage checking is also fully local keyword-matching. Live AI (Settings → AI Integration) stays available as a separate, explicit, opt-in fallback only — it is never used automatically, and each use asks you to confirm before anything is sent externally.</span>
     </div>
 
     <div class="card" style="padding:16px; margin-bottom:18px;">
@@ -2477,12 +2477,13 @@ function renderMeetingIntelPage(){
         <div class="section-head"><h2>1. Discussion Points</h2></div>
         <div class="card" style="padding:14px;">
           <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
-            <label class="btn btn-sm btn-primary" style="cursor:pointer;">&#128193; Choose Agenda File
+            <label class="btn btn-sm btn-primary" style="cursor:pointer;">&#128274; Choose Agenda File
               <input type="file" accept=".pdf,.txt,.md,image/*" style="display:none;" onchange="handleAgendaFileUpload(this)">
             </label>
             <button class="btn btn-sm btn-ghost" onclick="pullPointsFromAgenda()">&#8681; Pull from Agenda Review</button>
             <button class="btn btn-sm btn-ghost" onclick="openPastAgendaText()">&#128221; Paste Text Instead</button>
             <button class="btn btn-sm btn-ghost" onclick="openAddPoint()">+ Add Point</button>
+            ${aiIsLiveConfigured() && LAST_AGENDA_FILE ? `<button class="btn btn-sm btn-ghost" style="border-color:var(--amber); color:var(--amber);" onclick="extractAgendaWithLiveAI()">&#9888; Try Live AI Instead (sends file externally)</button>` : ''}
           </div>
           <div id="agendaFileStatus"></div>
           ${mi.points.length? `<div style="display:flex; flex-direction:column; gap:6px;">
@@ -2499,7 +2500,7 @@ function renderMeetingIntelPage(){
                   </div>
                 </div>
               </div>`).join('')}
-          </div>` : `<div class="empty-state"><div class="ei">&#128203;</div><div class="et">No discussion points yet</div><div class="ed">Choose an agenda file, pull from Agenda Review, or paste text.</div></div>`}
+          </div>` : `<div class="empty-state"><div class="ei">&#128203;</div><div class="et">No discussion points yet</div><div class="ed">Choose an agenda file (read locally), pull from Agenda Review, or paste text.</div></div>`}
         </div>
       </div>
 
@@ -2507,16 +2508,17 @@ function renderMeetingIntelPage(){
         <div class="section-head"><h2>2. Minutes Text</h2></div>
         <div class="card" style="padding:14px;">
           <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
-            <label class="btn btn-sm btn-primary" style="cursor:pointer;">&#128193; Choose Minutes File
+            <label class="btn btn-sm btn-primary" style="cursor:pointer;">&#128274; Choose Minutes File
               <input type="file" accept=".pdf,.txt,.md,image/*" style="display:none;" onchange="handleMinutesFileUpload(this)">
             </label>
             <button class="btn btn-sm btn-ghost" onclick="pullMinutesFromRecords()">&#8681; Pull from Minutes Module</button>
+            ${aiIsLiveConfigured() && LAST_MINUTES_FILE ? `<button class="btn btn-sm btn-ghost" style="border-color:var(--amber); color:var(--amber);" onclick="extractMinutesWithLiveAI()">&#9888; Try Live AI Instead (sends file externally)</button>` : ''}
           </div>
           <div id="minutesFileStatus"></div>
           <textarea id="miMinutesText" placeholder="Paste the circulated / signed minutes text here…" style="width:100%; min-height:220px; background:var(--panel-2); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:10px;">${escapeHtml(mi.minutesText||'')}</textarea>
           <div style="display:flex; gap:8px; margin-top:10px;">
             <button class="btn btn-ghost btn-sm" onclick="saveMinutesText()">Save Minutes Text</button>
-            <button class="btn btn-primary btn-sm" onclick="checkCoverage()">&#129302; Check Coverage</button>
+            <button class="btn btn-primary btn-sm" onclick="checkCoverage()">&#129504; Check Coverage</button>
           </div>
         </div>
       </div>
@@ -2534,15 +2536,117 @@ function renderMeetingIntelPage(){
     </div>` : ''}
   `;
 }
-/* ---- File upload → discussion points / minutes text ---- */
-const FILE_EXTRACT_MAX_BYTES = 15*1024*1024;
+/* =========================================================================
+   Local, private document reading — PDF.js (text-layer PDFs) and
+   Tesseract.js (OCR for images / scanned PDFs). Both run entirely inside
+   this browser: the first time either is used, its (public, non-confidential)
+   library code is fetched once from a CDN and cached — but the actual
+   document content you upload is processed locally and is never sent
+   anywhere. This is the default path. The separate "Live AI" option
+   below remains available but is never used automatically.
+   ========================================================================= */
+let PDFJS_LOADED = false;
+let TESSERACT_LOADED = false;
+function loadScriptTag(src){
+  return new Promise((resolve,reject)=>{
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = ()=>resolve();
+    s.onerror = ()=>reject(new Error('Could not load a required local-processing library — check your internet connection (needed once, to download the tool itself; your document is never uploaded).'));
+    document.head.appendChild(s);
+  });
+}
+async function ensurePdfJs(){
+  if(PDFJS_LOADED) return window.pdfjsLib;
+  // Classic (non-module) build via a plain <script> tag — this avoids the
+  // stricter CORS rules that apply to ES-module imports from file:// pages,
+  // matching the loading approach already used for Tesseract.js below.
+  await loadScriptTag('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js');
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js';
+  PDFJS_LOADED = true;
+  return window.pdfjsLib;
+}
+async function ensureTesseract(){
+  if(TESSERACT_LOADED) return;
+  await loadScriptTag('https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js');
+  TESSERACT_LOADED = true;
+}
+let OCR_WORKER = null;
+async function getOcrWorker(onProgress){
+  await ensureTesseract();
+  if(!OCR_WORKER){
+    OCR_WORKER = await Tesseract.createWorker('eng', 1, { logger: onProgress });
+  }
+  return OCR_WORKER;
+}
+async function ocrImageDataUrl(dataUrl, onProgress){
+  const worker = await getOcrWorker(onProgress);
+  const { data } = await worker.recognize(dataUrl);
+  return data.text || '';
+}
+async function pdfPageToDataUrl(pdfDocument, pageNum, scale){
+  const page = await pdfDocument.getPage(pageNum);
+  const viewport = page.getViewport({ scale: scale || 2 });
+  const canvas = document.createElement('canvas');
+  canvas.width = viewport.width; canvas.height = viewport.height;
+  const ctx = canvas.getContext('2d');
+  await page.render({ canvasContext: ctx, viewport }).promise;
+  return canvas.toDataURL('image/png');
+}
+/**
+ * Extracts text from a PDF entirely locally. Tries the PDF's embedded text
+ * layer first (instant, works for any "born-digital" PDF — e.g. exported
+ * from Word). If a page has little/no text (a scanned page), falls back to
+ * rendering that page as an image and running local OCR on it.
+ */
+async function extractPdfTextLocal(file, statusEl){
+  const pdfjsLib = await ensurePdfJs();
+  const buf = await file.arrayBuffer();
+  const pdfDocument = await pdfjsLib.getDocument({ data: buf }).promise;
+  let fullText = '';
+  let ocrPages = 0;
+  for(let i=1; i<=pdfDocument.numPages; i++){
+    if(statusEl) statusEl.innerHTML = `<div class="small-muted mt8">&#8987; Reading page ${i} of ${pdfDocument.numPages} (local)…</div>`;
+    const page = await pdfDocument.getPage(i);
+    const textContent = await page.getTextContent();
+    const pageText = textContent.items.filter(it=>'str' in it).map(it=>it.str).join(' ').trim();
+    if(pageText.length > 25){
+      fullText += pageText + '\n';
+    } else {
+      // Likely a scanned page with no embedded text — OCR it locally.
+      ocrPages++;
+      if(statusEl) statusEl.innerHTML = `<div class="small-muted mt8">&#8987; Page ${i} looks scanned — running local OCR (this can take a bit)…</div>`;
+      const dataUrl = await pdfPageToDataUrl(pdfDocument, i, 2);
+      const ocrText = await ocrImageDataUrl(dataUrl, (m)=>{
+        if(statusEl && m.status==='recognizing text'){
+          statusEl.innerHTML = `<div class="small-muted mt8">&#8987; OCR on page ${i}/${pdfDocument.numPages}: ${Math.round((m.progress||0)*100)}%</div>`;
+        }
+      });
+      fullText += ocrText + '\n';
+    }
+  }
+  return { text: fullText.trim(), ocrPages, totalPages: pdfDocument.numPages };
+}
+async function extractImageTextLocal(file, statusEl){
+  const base64 = await readFileAsBase64(file);
+  const dataUrl = `data:${file.type};base64,${base64}`;
+  if(statusEl) statusEl.innerHTML = `<div class="small-muted mt8">&#8987; Loading local OCR engine (first use only)…</div>`;
+  const text = await ocrImageDataUrl(dataUrl, (m)=>{
+    if(statusEl && m.status==='recognizing text'){
+      statusEl.innerHTML = `<div class="small-muted mt8">&#8987; Reading image locally: ${Math.round((m.progress||0)*100)}%</div>`;
+    }
+  });
+  return text;
+}
+
+/* ---- Shared file-reading helpers ---- */
+const FILE_EXTRACT_MAX_BYTES = 20*1024*1024;
 function readFileAsBase64(file){
   return new Promise((resolve,reject)=>{
     const reader = new FileReader();
     reader.onload = ()=>{
       const result = reader.result; // data:<mime>;base64,<data>
-      const base64 = result.split(',')[1];
-      resolve(base64);
+      resolve(result.split(',')[1]);
     };
     reader.onerror = ()=>reject(reader.error);
     reader.readAsDataURL(file);
@@ -2556,6 +2660,9 @@ function readFileAsText(file){
     reader.readAsText(file);
   });
 }
+
+/* ---- Optional: Live AI extraction (explicit opt-in only, sends the file
+   to Anthropic's API — never triggered automatically) ---- */
 async function callClaudeAPIWithFile(base64Data, mediaType, isPdf, promptText, systemPrompt){
   const key = DATA.aiConfig && DATA.aiConfig.apiKey;
   if(!key) throw new Error('No API key configured.');
@@ -2592,11 +2699,15 @@ async function callClaudeAPIWithFile(base64Data, mediaType, isPdf, promptText, s
   const textBlock = (data.content||[]).find(b=>b.type==='text');
   return textBlock ? textBlock.text : '';
 }
+
+/* ---- Agenda file handler ---- */
+let LAST_AGENDA_FILE = null;
 async function handleAgendaFileUpload(inputEl){
   const file = inputEl.files && inputEl.files[0];
   if(!file) return;
   const statusEl = document.getElementById('agendaFileStatus');
-  if(file.size > FILE_EXTRACT_MAX_BYTES){ toast('File is too large (max 15MB).', true); inputEl.value=''; return; }
+  if(file.size > FILE_EXTRACT_MAX_BYTES){ toast('File is too large (max 20MB).', true); inputEl.value=''; return; }
+  LAST_AGENDA_FILE = file;
   const isTextFile = /\.(txt|md)$/i.test(file.name) || file.type==='text/plain';
   const isPdf = file.type==='application/pdf' || /\.pdf$/i.test(file.name);
   const isImage = file.type.startsWith('image/');
@@ -2604,24 +2715,52 @@ async function handleAgendaFileUpload(inputEl){
   if(isTextFile){
     try{
       const text = await readFileAsText(file);
-      const points = extractPointsFromText(text);
-      if(!points.length){ toast('Could not find any discussion points in that file.', true); inputEl.value=''; return; }
-      const mi = ensureMeetingIntel(MI_SELECTED_MEETING);
-      const existing = new Set(mi.points.map(p=>p.text));
-      let added=0;
-      points.forEach(t=>{ if(!existing.has(t)){ mi.points.push({id:uid('pt'), text:t, status:'Pending'}); added++; } });
-      saveAll(); toast(`${added} point(s) extracted from "${file.name}".`);
-      renderTopbar(); renderSidebar(); renderPage();
+      applyExtractedAgendaText(text, file.name);
     }catch(e){ toast('Could not read that file.', true); }
     inputEl.value=''; return;
   }
-
   if(!isPdf && !isImage){ toast('Unsupported file type. Use a PDF, image, or .txt/.md file.', true); inputEl.value=''; return; }
-  if(!aiIsLiveConfigured()){
-    toast('Reading PDFs/photos needs your Live AI key — set one up in Settings → AI Integration, or use "Paste Text Instead".', true);
-    inputEl.value=''; return;
+
+  try{
+    let text;
+    if(isPdf){
+      const result = await extractPdfTextLocal(file, statusEl);
+      text = result.text;
+      if(result.ocrPages>0) toast(`Read ${result.totalPages} page(s) locally — ${result.ocrPages} needed OCR.`);
+    } else {
+      text = await extractImageTextLocal(file, statusEl);
+    }
+    if(statusEl) statusEl.innerHTML = '';
+    if(!text || text.trim().length<8){
+      if(statusEl) statusEl.innerHTML = `<div class="small-muted mt8">Local reading found little/no text in "${escapeHtml(file.name)}". ${aiIsLiveConfigured() ? 'You can try Live AI below, or ' : ''}Try "Paste Text Instead".</div>`;
+      toast('Could not extract readable text locally from that file.', true);
+    } else {
+      applyExtractedAgendaText(text, file.name);
+    }
+  }catch(e){
+    if(statusEl) statusEl.innerHTML = `<div class="small-muted mt8" style="color:var(--red);">Local extraction failed: ${escapeHtml(String(e.message||e).slice(0,160))}</div>`;
+    toast('Local extraction failed — see message below the button.', true);
   }
-  if(statusEl) statusEl.innerHTML = `<div class="small-muted mt8">&#8987; Reading "${escapeHtml(file.name)}" with Live AI…</div>`;
+  inputEl.value='';
+}
+function applyExtractedAgendaText(text, filename){
+  const points = extractPointsFromText(text);
+  if(!points.length){ toast(`Could not identify discussion points in "${filename}".`, true); return; }
+  const mi = ensureMeetingIntel(MI_SELECTED_MEETING);
+  const existing = new Set(mi.points.map(p=>p.text));
+  let added=0;
+  points.forEach(t=>{ if(!existing.has(t)){ mi.points.push({id:uid('pt'), text:t, status:'Pending'}); added++; } });
+  saveAll(); toast(`${added} point(s) extracted from "${filename}" (processed locally).`);
+  renderTopbar(); renderSidebar(); renderPage();
+}
+async function extractAgendaWithLiveAI(){
+  const file = LAST_AGENDA_FILE;
+  if(!file){ toast('Choose a file first, then use this option if local reading was not good enough.', true); return; }
+  if(!aiIsLiveConfigured()){ toast('Set up your API key in Settings → AI Integration first.', true); return; }
+  if(!confirm(`This will send "${file.name}" to Anthropic's API using your configured key. Only do this if you are comfortable sharing this document externally. Continue?`)) return;
+  const statusEl = document.getElementById('agendaFileStatus');
+  const isPdf = file.type==='application/pdf' || /\.pdf$/i.test(file.name);
+  if(statusEl) statusEl.innerHTML = `<div class="small-muted mt8">&#8987; Sending to Live AI…</div>`;
   try{
     const base64 = await readFileAsBase64(file);
     const prompt = 'This is a board/committee meeting agenda document. Extract every distinct agenda item or discussion point as a separate line, in plain text, one point per line, no numbering or bullet characters, no preamble or closing remarks — just the list of points.';
@@ -2633,20 +2772,23 @@ async function handleAgendaFileUpload(inputEl){
       const existing = new Set(mi.points.map(p=>p.text));
       let added=0;
       points.forEach(t=>{ if(!existing.has(t)){ mi.points.push({id:uid('pt'), text:t, status:'Pending'}); added++; } });
-      saveAll(); toast(`${added} point(s) extracted from "${file.name}" via Live AI.`);
+      saveAll(); toast(`${added} point(s) extracted via Live AI.`);
     }
   }catch(e){
-    toast('Extraction failed: ' + String(e.message||e).slice(0,140), true);
+    toast('Live AI extraction failed: ' + String(e.message||e).slice(0,140), true);
   }
   if(statusEl) statusEl.innerHTML = '';
-  inputEl.value='';
   renderTopbar(); renderSidebar(); renderPage();
 }
+
+/* ---- Minutes file handler ---- */
+let LAST_MINUTES_FILE = null;
 async function handleMinutesFileUpload(inputEl){
   const file = inputEl.files && inputEl.files[0];
   if(!file) return;
   const statusEl = document.getElementById('minutesFileStatus');
-  if(file.size > FILE_EXTRACT_MAX_BYTES){ toast('File is too large (max 15MB).', true); inputEl.value=''; return; }
+  if(file.size > FILE_EXTRACT_MAX_BYTES){ toast('File is too large (max 20MB).', true); inputEl.value=''; return; }
+  LAST_MINUTES_FILE = file;
   const isTextFile = /\.(txt|md)$/i.test(file.name) || file.type==='text/plain';
   const isPdf = file.type==='application/pdf' || /\.pdf$/i.test(file.name);
   const isImage = file.type.startsWith('image/');
@@ -2661,13 +2803,41 @@ async function handleMinutesFileUpload(inputEl){
     }catch(e){ toast('Could not read that file.', true); }
     inputEl.value=''; return;
   }
-
   if(!isPdf && !isImage){ toast('Unsupported file type. Use a PDF, image, or .txt/.md file.', true); inputEl.value=''; return; }
-  if(!aiIsLiveConfigured()){
-    toast('Reading PDFs/photos needs your Live AI key — set one up in Settings → AI Integration, or paste the minutes text directly.', true);
-    inputEl.value=''; return;
+
+  try{
+    let text;
+    if(isPdf){
+      const result = await extractPdfTextLocal(file, statusEl);
+      text = result.text;
+      if(result.ocrPages>0) toast(`Read ${result.totalPages} page(s) locally — ${result.ocrPages} needed OCR.`);
+    } else {
+      text = await extractImageTextLocal(file, statusEl);
+    }
+    if(statusEl) statusEl.innerHTML = '';
+    if(!text || text.trim().length<8){
+      if(statusEl) statusEl.innerHTML = `<div class="small-muted mt8">Local reading found little/no text in "${escapeHtml(file.name)}". ${aiIsLiveConfigured() ? 'You can try Live AI below, or ' : ''}paste the text directly.</div>`;
+      toast('Could not extract readable text locally from that file.', true);
+    } else {
+      mi.minutesText = (mi.minutesText? mi.minutesText+'\n':'') + text.trim();
+      saveAll(); toast(`Minutes text extracted from "${file.name}" (processed locally).`);
+      renderTopbar(); renderSidebar(); renderPage();
+    }
+  }catch(e){
+    if(statusEl) statusEl.innerHTML = `<div class="small-muted mt8" style="color:var(--red);">Local extraction failed: ${escapeHtml(String(e.message||e).slice(0,160))}</div>`;
+    toast('Local extraction failed — see message below the button.', true);
   }
-  if(statusEl) statusEl.innerHTML = `<div class="small-muted mt8">&#8987; Reading "${escapeHtml(file.name)}" with Live AI…</div>`;
+  inputEl.value='';
+}
+async function extractMinutesWithLiveAI(){
+  const file = LAST_MINUTES_FILE;
+  if(!file){ toast('Choose a file first, then use this option if local reading was not good enough.', true); return; }
+  if(!aiIsLiveConfigured()){ toast('Set up your API key in Settings → AI Integration first.', true); return; }
+  if(!confirm(`This will send "${file.name}" to Anthropic's API using your configured key. Only do this if you are comfortable sharing this document externally. Continue?`)) return;
+  const statusEl = document.getElementById('minutesFileStatus');
+  const isPdf = file.type==='application/pdf' || /\.pdf$/i.test(file.name);
+  const mi = ensureMeetingIntel(MI_SELECTED_MEETING);
+  if(statusEl) statusEl.innerHTML = `<div class="small-muted mt8">&#8987; Sending to Live AI…</div>`;
   try{
     const base64 = await readFileAsBase64(file);
     const prompt = 'This is a board/committee meeting minutes document. Transcribe its substantive content in plain text — resolutions passed, discussion summaries, decisions and action points. Skip letterhead/boilerplate formatting. Plain text only, no markdown.';
@@ -2675,15 +2845,15 @@ async function handleMinutesFileUpload(inputEl){
     if(!reply || !reply.trim()){ toast('Live AI could not extract text from that file.', true); }
     else{
       mi.minutesText = (mi.minutesText? mi.minutesText+'\n':'') + reply.trim();
-      saveAll(); toast(`Minutes text extracted from "${file.name}" via Live AI.`);
+      saveAll(); toast(`Minutes text extracted via Live AI.`);
     }
   }catch(e){
-    toast('Extraction failed: ' + String(e.message||e).slice(0,140), true);
+    toast('Live AI extraction failed: ' + String(e.message||e).slice(0,140), true);
   }
   if(statusEl) statusEl.innerHTML = '';
-  inputEl.value='';
   renderTopbar(); renderSidebar(); renderPage();
 }
+
 
 function pullPointsFromAgenda(){
   const mi = ensureMeetingIntel(MI_SELECTED_MEETING);
@@ -2978,11 +3148,12 @@ function renderSettingsPage(){
     </div>
 
     <div class="card mt16">
-      <div class="card-title">AI Integration — Bring Your Own API Key</div>
+      <div class="card-title">AI Integration — Bring Your Own API Key (optional)</div>
       <div class="card-sub mt8" style="line-height:1.6;">
-        Add your own Anthropic API key to make the Governance AI Assistant use real Claude instead of local demo logic.
-        <strong style="color:var(--amber);">Important:</strong> this key is stored only in this browser and is sent directly from your browser to Anthropic's servers with every request — it is not routed through any backend of ours. Anyone with access to this device, or to network traffic on it, could see it. Treat it like a password; don't use this on a shared or public computer.
-        Some browsers or networks block this kind of direct request — if so, the assistant automatically falls back to local demo mode.
+        This is entirely optional and off by default. By default, the Governance AI Assistant runs local demo logic, and the Agenda–Minutes Tracker reads PDFs/photos entirely on-device — nothing about your meetings is sent anywhere unless you explicitly choose to.
+        Adding a key here only enables two things, both opt-in per use: (1) the chat assistant can use real Claude instead of local logic when "Enable Live AI" is on below, and (2) in the Agenda–Minutes Tracker, a separate "Try Live AI Instead" button becomes available if local document reading isn't good enough — it always asks you to confirm before sending that specific file.
+        <strong style="color:var(--amber);">Important:</strong> this key is stored only in this browser and is sent directly from your browser to Anthropic's servers with every request — it is not routed through any backend of ours. Anyone with access to this device, or to network traffic on it, could see it. Treat it like a password; don't use this on a shared or public computer, and think carefully before sending confidential board material externally even with your own key.
+        Some browsers or networks block this kind of direct request — if so, requests fail cleanly and fall back to local behaviour.
         Usage is billed to your own Anthropic account; check <span style="color:var(--blue);">console.anthropic.com</span> for current pricing and any starter credit for new accounts.
       </div>
       <div class="form-grid mt16">
