@@ -2459,7 +2459,7 @@ function renderMeetingIntelPage(){
     </div>
     <div class="disclaimer-strip">
       <span>&#9888;</span>
-      <span>This tool matches keywords between your discussion points and pasted minutes text — it is a local checklist aid, not document comprehension. Always read the final minutes yourself before relying on this check.</span>
+      <span>Text files (.txt/.md) are read instantly in your browser. PDFs and photos need your Live AI key (Settings → AI Integration) to extract text, since reading scanned documents isn't something this app can do locally — everything then still runs through the same local keyword-matching coverage check. Always read the final minutes yourself before relying on this check.</span>
     </div>
 
     <div class="card" style="padding:16px; margin-bottom:18px;">
@@ -2477,10 +2477,14 @@ function renderMeetingIntelPage(){
         <div class="section-head"><h2>1. Discussion Points</h2></div>
         <div class="card" style="padding:14px;">
           <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+            <label class="btn btn-sm btn-primary" style="cursor:pointer;">&#128193; Choose Agenda File
+              <input type="file" accept=".pdf,.txt,.md,image/*" style="display:none;" onchange="handleAgendaFileUpload(this)">
+            </label>
             <button class="btn btn-sm btn-ghost" onclick="pullPointsFromAgenda()">&#8681; Pull from Agenda Review</button>
-            <button class="btn btn-sm btn-ghost" onclick="openPastAgendaText()">&#128221; Paste Agenda Text</button>
+            <button class="btn btn-sm btn-ghost" onclick="openPastAgendaText()">&#128221; Paste Text Instead</button>
             <button class="btn btn-sm btn-ghost" onclick="openAddPoint()">+ Add Point</button>
           </div>
+          <div id="agendaFileStatus"></div>
           ${mi.points.length? `<div style="display:flex; flex-direction:column; gap:6px;">
             ${mi.points.map((p,i)=>`
               <div class="alert-row ${p.status==='Not Found'?'high':p.status==='Covered'?'low':'medium'}" style="padding:9px 11px; margin-bottom:0;">
@@ -2495,7 +2499,7 @@ function renderMeetingIntelPage(){
                   </div>
                 </div>
               </div>`).join('')}
-          </div>` : `<div class="empty-state"><div class="ei">&#128203;</div><div class="et">No discussion points yet</div><div class="ed">Pull from Agenda Review or paste raw agenda text.</div></div>`}
+          </div>` : `<div class="empty-state"><div class="ei">&#128203;</div><div class="et">No discussion points yet</div><div class="ed">Choose an agenda file, pull from Agenda Review, or paste text.</div></div>`}
         </div>
       </div>
 
@@ -2503,8 +2507,12 @@ function renderMeetingIntelPage(){
         <div class="section-head"><h2>2. Minutes Text</h2></div>
         <div class="card" style="padding:14px;">
           <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+            <label class="btn btn-sm btn-primary" style="cursor:pointer;">&#128193; Choose Minutes File
+              <input type="file" accept=".pdf,.txt,.md,image/*" style="display:none;" onchange="handleMinutesFileUpload(this)">
+            </label>
             <button class="btn btn-sm btn-ghost" onclick="pullMinutesFromRecords()">&#8681; Pull from Minutes Module</button>
           </div>
+          <div id="minutesFileStatus"></div>
           <textarea id="miMinutesText" placeholder="Paste the circulated / signed minutes text here…" style="width:100%; min-height:220px; background:var(--panel-2); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:10px;">${escapeHtml(mi.minutesText||'')}</textarea>
           <div style="display:flex; gap:8px; margin-top:10px;">
             <button class="btn btn-ghost btn-sm" onclick="saveMinutesText()">Save Minutes Text</button>
@@ -2526,6 +2534,157 @@ function renderMeetingIntelPage(){
     </div>` : ''}
   `;
 }
+/* ---- File upload → discussion points / minutes text ---- */
+const FILE_EXTRACT_MAX_BYTES = 15*1024*1024;
+function readFileAsBase64(file){
+  return new Promise((resolve,reject)=>{
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      const result = reader.result; // data:<mime>;base64,<data>
+      const base64 = result.split(',')[1];
+      resolve(base64);
+    };
+    reader.onerror = ()=>reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+function readFileAsText(file){
+  return new Promise((resolve,reject)=>{
+    const reader = new FileReader();
+    reader.onload = ()=>resolve(reader.result);
+    reader.onerror = ()=>reject(reader.error);
+    reader.readAsText(file);
+  });
+}
+async function callClaudeAPIWithFile(base64Data, mediaType, isPdf, promptText, systemPrompt){
+  const key = DATA.aiConfig && DATA.aiConfig.apiKey;
+  if(!key) throw new Error('No API key configured.');
+  const model = (DATA.aiConfig && DATA.aiConfig.model) || 'claude-sonnet-4-6';
+  const fileBlock = isPdf
+    ? { type:'document', source:{ type:'base64', media_type:'application/pdf', data: base64Data } }
+    : { type:'image', source:{ type:'base64', media_type: mediaType, data: base64Data } };
+  let resp;
+  try{
+    resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key': key,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 1500,
+        system: systemPrompt || undefined,
+        messages: [{ role:'user', content:[ fileBlock, { type:'text', text: promptText } ] }]
+      })
+    });
+  }catch(netErr){
+    throw new Error('Network/CORS error reaching Anthropic API — this browser or network may be blocking direct API calls.');
+  }
+  if(!resp.ok){
+    let detail = '';
+    try{ const errJson = await resp.json(); detail = errJson.error && errJson.error.message ? errJson.error.message : ''; }catch(e){}
+    throw new Error(`API error ${resp.status}${detail? ': '+detail : ''}`);
+  }
+  const data = await resp.json();
+  const textBlock = (data.content||[]).find(b=>b.type==='text');
+  return textBlock ? textBlock.text : '';
+}
+async function handleAgendaFileUpload(inputEl){
+  const file = inputEl.files && inputEl.files[0];
+  if(!file) return;
+  const statusEl = document.getElementById('agendaFileStatus');
+  if(file.size > FILE_EXTRACT_MAX_BYTES){ toast('File is too large (max 15MB).', true); inputEl.value=''; return; }
+  const isTextFile = /\.(txt|md)$/i.test(file.name) || file.type==='text/plain';
+  const isPdf = file.type==='application/pdf' || /\.pdf$/i.test(file.name);
+  const isImage = file.type.startsWith('image/');
+
+  if(isTextFile){
+    try{
+      const text = await readFileAsText(file);
+      const points = extractPointsFromText(text);
+      if(!points.length){ toast('Could not find any discussion points in that file.', true); inputEl.value=''; return; }
+      const mi = ensureMeetingIntel(MI_SELECTED_MEETING);
+      const existing = new Set(mi.points.map(p=>p.text));
+      let added=0;
+      points.forEach(t=>{ if(!existing.has(t)){ mi.points.push({id:uid('pt'), text:t, status:'Pending'}); added++; } });
+      saveAll(); toast(`${added} point(s) extracted from "${file.name}".`);
+      renderTopbar(); renderSidebar(); renderPage();
+    }catch(e){ toast('Could not read that file.', true); }
+    inputEl.value=''; return;
+  }
+
+  if(!isPdf && !isImage){ toast('Unsupported file type. Use a PDF, image, or .txt/.md file.', true); inputEl.value=''; return; }
+  if(!aiIsLiveConfigured()){
+    toast('Reading PDFs/photos needs your Live AI key — set one up in Settings → AI Integration, or use "Paste Text Instead".', true);
+    inputEl.value=''; return;
+  }
+  if(statusEl) statusEl.innerHTML = `<div class="small-muted mt8">&#8987; Reading "${escapeHtml(file.name)}" with Live AI…</div>`;
+  try{
+    const base64 = await readFileAsBase64(file);
+    const prompt = 'This is a board/committee meeting agenda document. Extract every distinct agenda item or discussion point as a separate line, in plain text, one point per line, no numbering or bullet characters, no preamble or closing remarks — just the list of points.';
+    const reply = await callClaudeAPIWithFile(base64, file.type, isPdf, prompt, 'You extract structured discussion points from meeting agenda documents for a corporate governance tracking app. Be concise and literal.');
+    const points = reply.split(/\n+/).map(l=>l.replace(/^[-•*\d.\)]+\s*/,'').trim()).filter(l=>l.length>4);
+    if(!points.length){ toast('Live AI could not identify discussion points in that file.', true); }
+    else{
+      const mi = ensureMeetingIntel(MI_SELECTED_MEETING);
+      const existing = new Set(mi.points.map(p=>p.text));
+      let added=0;
+      points.forEach(t=>{ if(!existing.has(t)){ mi.points.push({id:uid('pt'), text:t, status:'Pending'}); added++; } });
+      saveAll(); toast(`${added} point(s) extracted from "${file.name}" via Live AI.`);
+    }
+  }catch(e){
+    toast('Extraction failed: ' + String(e.message||e).slice(0,140), true);
+  }
+  if(statusEl) statusEl.innerHTML = '';
+  inputEl.value='';
+  renderTopbar(); renderSidebar(); renderPage();
+}
+async function handleMinutesFileUpload(inputEl){
+  const file = inputEl.files && inputEl.files[0];
+  if(!file) return;
+  const statusEl = document.getElementById('minutesFileStatus');
+  if(file.size > FILE_EXTRACT_MAX_BYTES){ toast('File is too large (max 15MB).', true); inputEl.value=''; return; }
+  const isTextFile = /\.(txt|md)$/i.test(file.name) || file.type==='text/plain';
+  const isPdf = file.type==='application/pdf' || /\.pdf$/i.test(file.name);
+  const isImage = file.type.startsWith('image/');
+  const mi = ensureMeetingIntel(MI_SELECTED_MEETING);
+
+  if(isTextFile){
+    try{
+      const text = await readFileAsText(file);
+      mi.minutesText = (mi.minutesText? mi.minutesText+'\n':'') + text;
+      saveAll(); toast(`Minutes text loaded from "${file.name}".`);
+      renderTopbar(); renderSidebar(); renderPage();
+    }catch(e){ toast('Could not read that file.', true); }
+    inputEl.value=''; return;
+  }
+
+  if(!isPdf && !isImage){ toast('Unsupported file type. Use a PDF, image, or .txt/.md file.', true); inputEl.value=''; return; }
+  if(!aiIsLiveConfigured()){
+    toast('Reading PDFs/photos needs your Live AI key — set one up in Settings → AI Integration, or paste the minutes text directly.', true);
+    inputEl.value=''; return;
+  }
+  if(statusEl) statusEl.innerHTML = `<div class="small-muted mt8">&#8987; Reading "${escapeHtml(file.name)}" with Live AI…</div>`;
+  try{
+    const base64 = await readFileAsBase64(file);
+    const prompt = 'This is a board/committee meeting minutes document. Transcribe its substantive content in plain text — resolutions passed, discussion summaries, decisions and action points. Skip letterhead/boilerplate formatting. Plain text only, no markdown.';
+    const reply = await callClaudeAPIWithFile(base64, file.type, isPdf, prompt, 'You transcribe meeting minutes documents for a corporate governance tracking app, preserving substantive content.');
+    if(!reply || !reply.trim()){ toast('Live AI could not extract text from that file.', true); }
+    else{
+      mi.minutesText = (mi.minutesText? mi.minutesText+'\n':'') + reply.trim();
+      saveAll(); toast(`Minutes text extracted from "${file.name}" via Live AI.`);
+    }
+  }catch(e){
+    toast('Extraction failed: ' + String(e.message||e).slice(0,140), true);
+  }
+  if(statusEl) statusEl.innerHTML = '';
+  inputEl.value='';
+  renderTopbar(); renderSidebar(); renderPage();
+}
+
 function pullPointsFromAgenda(){
   const mi = ensureMeetingIntel(MI_SELECTED_MEETING);
   const items = DATA.agendaItems.filter(a=>a.meetingRef===MI_SELECTED_MEETING);
