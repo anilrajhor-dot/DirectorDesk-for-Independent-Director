@@ -818,6 +818,93 @@ async function cleanupOrphanedAttachments(){
   }catch(e){ toast('Cleanup failed — IndexedDB unavailable in this browser.', true); }
 }
 
+/* ---- Manage / delete attachments (individually or all at once) ---- */
+function findAttachmentReferences(fileId){
+  const refs = [];
+  Object.values(MODULES).forEach(mod=>{
+    (DATA[mod.dataKey]||[]).forEach(r=>{
+      if((r.attachments||[]).some(a=>a.id===fileId)){
+        const labelField = mod.columns[0] ? mod.columns[0].key : 'id';
+        refs.push({ module: mod.label, moduleKey: Object.keys(MODULES).find(k=>MODULES[k]===mod), recordId: r.id, label: String(r[labelField]||r.id).slice(0,50) });
+      }
+    });
+  });
+  (DATA.meetings||[]).forEach(m=>{
+    if((m.attachments||[]).some(a=>a.id===fileId)) refs.push({ module:'Meetings', moduleKey:'meeting', recordId:m.id, label:m.number });
+  });
+  (DATA.complianceEvents||[]).forEach(e=>{
+    if((e.attachments||[]).some(a=>a.id===fileId)) refs.push({ module:'Compliance Calendar', moduleKey:'calendarEvent', recordId:e.id, label:e.title });
+  });
+  return refs;
+}
+function stripAttachmentEverywhere(fileId){
+  Object.values(MODULES).forEach(mod=>{
+    (DATA[mod.dataKey]||[]).forEach(r=>{ if(r.attachments) r.attachments = r.attachments.filter(a=>a.id!==fileId); });
+  });
+  (DATA.meetings||[]).forEach(m=>{ if(m.attachments) m.attachments = m.attachments.filter(a=>a.id!==fileId); });
+  (DATA.complianceEvents||[]).forEach(e=>{ if(e.attachments) e.attachments = e.attachments.filter(a=>a.id!==fileId); });
+}
+async function openManageAttachments(){
+  showModal(`<div class="modal-head"><h3>Manage Attachments</h3><button class="modal-close" onclick="closeModal()">&#10005;</button></div><div id="attachManagerBody"><div class="field-hint">Loading…</div></div>`);
+  await renderAttachManagerBody();
+}
+async function renderAttachManagerBody(){
+  const body = document.getElementById('attachManagerBody');
+  if(!body) return;
+  try{
+    const all = await idbGetAll();
+    if(!all.length){ body.innerHTML = `<div class="field-hint">No attachments stored yet.</div><div class="modal-foot"><div></div><button class="btn btn-primary" onclick="closeModal()">Close</button></div>`; return; }
+    const rows = all.map(f=>{
+      const refs = findAttachmentReferences(f.id);
+      const sizeKB = Math.round(((f.dataUrl||'').length * 0.75) / 1024);
+      return `
+        <div class="attach-chip" style="align-items:flex-start;">
+          <span class="an" style="white-space:normal;">
+            &#128206; <strong>${escapeHtml(f.name)}</strong> <span class="small-muted">(~${sizeKB} KB)</span><br>
+            <span class="small-muted">${refs.length? 'Used in: '+refs.map(r=>`${escapeHtml(r.module)} — ${escapeHtml(r.label)}`).join('; ') : 'Not attached to any record (orphaned)'}</span>
+          </span>
+          <a onclick="openAttachmentFile('${f.id}')" style="cursor:pointer; flex-shrink:0;">View</a>
+          <span class="rm" onclick="deleteAttachmentGlobally('${f.id}')" title="Delete" style="flex-shrink:0;">&#10005;</span>
+        </div>`;
+    }).join('');
+    body.innerHTML = `
+      <div class="small-muted mb8" style="margin-bottom:10px;">${all.length} file(s) stored. Deleting here removes the file and its reference from any record.</div>
+      <div style="display:flex; flex-direction:column; gap:6px; max-height:50vh; overflow-y:auto;">${rows}</div>
+      <div class="modal-foot"><button class="btn btn-danger btn-sm" onclick="confirmClearAllAttachments()">Clear All</button><button class="btn btn-primary" onclick="closeModal()">Close</button></div>
+    `;
+  }catch(e){
+    body.innerHTML = `<div class="field-hint" style="color:var(--red);">Could not load attachments — local file storage unavailable in this browser.</div>`;
+  }
+}
+async function deleteAttachmentGlobally(fileId){
+  try{
+    await idbDelete(fileId);
+    stripAttachmentEverywhere(fileId);
+    saveAll();
+    toast('Attachment deleted.');
+    renderTopbar(); renderSidebar(); renderPage();
+    await renderAttachManagerBody();
+  }catch(e){ toast('Could not delete — local file storage unavailable.', true); }
+}
+function confirmClearAllAttachments(){
+  if(!confirm('Delete ALL attachments across the entire app? This removes every uploaded file from local storage and cannot be undone. Records themselves are kept, just without their attachments.')) return;
+  clearAllAttachmentsNow();
+}
+async function clearAllAttachmentsNow(){
+  try{
+    const all = await idbGetAll();
+    for(const f of all){ await idbDelete(f.id); }
+    Object.values(MODULES).forEach(mod=>{ (DATA[mod.dataKey]||[]).forEach(r=>{ r.attachments = []; }); });
+    (DATA.meetings||[]).forEach(m=>{ m.attachments = []; });
+    (DATA.complianceEvents||[]).forEach(e=>{ e.attachments = []; });
+    logActivity({module:'Settings', action:'Bulk delete', detail:`Cleared all ${all.length} attachment(s)`});
+    saveAll();
+    toast(`Cleared ${all.length} attachment(s).`);
+    renderTopbar(); renderSidebar(); renderPage();
+    if(document.getElementById('attachManagerBody')) await renderAttachManagerBody();
+  }catch(e){ toast('Clear failed — local file storage unavailable.', true); }
+}
+
 /* ---------------- Activity Log ---------------- */
 function logActivity(entry){
   DATA.activityLog = DATA.activityLog || [];
@@ -2429,10 +2516,16 @@ function pointCoverageRatio(pointText, minutesText){
 function extractPointsFromText(text){
   if(!text || !text.trim()) return [];
   let lines = text.split(/\n+/).map(l=>l.trim()).filter(Boolean);
+  // If line-based splitting didn't find much structure (common when a PDF's
+  // line breaks didn't survive, or everything landed on one paragraph),
+  // fall back to splitting right before each numbered/lettered item marker
+  // — "1.", "1)", "Item 1", "Agenda Item No. 2", etc.
+  const markerRegex = /(?=(?:^|\s)(?:(?:agenda\s+item|item)\s+(?:no\.?\s*)?\d{1,2}\b|\d{1,2}[\.\):]\s))/i;
   if(lines.length<=2){
-    lines = text.split(/(?=\b\d{1,2}[\.\)]\s)/).map(l=>l.trim()).filter(Boolean);
+    const markerSplit = text.split(markerRegex).map(l=>l.trim()).filter(Boolean);
+    if(markerSplit.length > lines.length) lines = markerSplit;
   }
-  lines = lines.map(l=> l.replace(/^\s*(item\s*)?\d{1,2}[\.\)]\s*/i,'').replace(/^[-•*]\s*/,'').trim());
+  lines = lines.map(l=> l.replace(/^\s*(agenda\s+item\s+(no\.?\s*)?|item\s+(no\.?\s*)?)?\d{1,2}[\.\):]?\s*/i,'').replace(/^[-•*]\s*/,'').trim());
   lines = lines.filter(l=> l.length>8);
   return lines;
 }
@@ -2599,6 +2692,28 @@ async function pdfPageToDataUrl(pdfDocument, pageNum, scale){
  * from Word). If a page has little/no text (a scanned page), falls back to
  * rendering that page as an image and running local OCR on it.
  */
+function reconstructLinesFromTextContent(textContent){
+  // pdf.js gives a flat list of positioned text fragments with no line breaks.
+  // Group fragments by vertical position (y) to rebuild actual lines —
+  // otherwise every item on a page gets joined into one run-on blob and
+  // "Item 1 / Item 2 / Item 3" style agendas become unsplittable.
+  const items = (textContent.items||[]).filter(it=>'str' in it && it.str!==undefined);
+  let lines = [];
+  let currentLine = '';
+  let lastY = null;
+  items.forEach(item=>{
+    const y = item.transform ? item.transform[5] : null;
+    if(lastY!==null && y!==null && Math.abs(y-lastY) > 2){
+      if(currentLine.trim()) lines.push(currentLine.trim());
+      currentLine = '';
+    }
+    currentLine += item.str + ' ';
+    if(item.hasEOL){ if(currentLine.trim()) lines.push(currentLine.trim()); currentLine=''; }
+    if(y!==null) lastY = y;
+  });
+  if(currentLine.trim()) lines.push(currentLine.trim());
+  return lines.join('\n');
+}
 async function extractPdfTextLocal(file, statusEl){
   const pdfjsLib = await ensurePdfJs();
   const buf = await file.arrayBuffer();
@@ -2609,8 +2724,8 @@ async function extractPdfTextLocal(file, statusEl){
     if(statusEl) statusEl.innerHTML = `<div class="small-muted mt8">&#8987; Reading page ${i} of ${pdfDocument.numPages} (local)…</div>`;
     const page = await pdfDocument.getPage(i);
     const textContent = await page.getTextContent();
-    const pageText = textContent.items.filter(it=>'str' in it).map(it=>it.str).join(' ').trim();
-    if(pageText.length > 25){
+    const pageText = reconstructLinesFromTextContent(textContent).trim();
+    if(pageText.replace(/\s/g,'').length > 20){
       fullText += pageText + '\n';
     } else {
       // Likely a scanned page with no embedded text — OCR it locally.
@@ -2715,7 +2830,7 @@ async function handleAgendaFileUpload(inputEl){
   if(isTextFile){
     try{
       const text = await readFileAsText(file);
-      applyExtractedAgendaText(text, file.name);
+      openExtractedTextReview(text, file.name);
     }catch(e){ toast('Could not read that file.', true); }
     inputEl.value=''; return;
   }
@@ -2735,7 +2850,7 @@ async function handleAgendaFileUpload(inputEl){
       if(statusEl) statusEl.innerHTML = `<div class="small-muted mt8">Local reading found little/no text in "${escapeHtml(file.name)}". ${aiIsLiveConfigured() ? 'You can try Live AI below, or ' : ''}Try "Paste Text Instead".</div>`;
       toast('Could not extract readable text locally from that file.', true);
     } else {
-      applyExtractedAgendaText(text, file.name);
+      openExtractedTextReview(text, file.name);
     }
   }catch(e){
     if(statusEl) statusEl.innerHTML = `<div class="small-muted mt8" style="color:var(--red);">Local extraction failed: ${escapeHtml(String(e.message||e).slice(0,160))}</div>`;
@@ -2743,14 +2858,43 @@ async function handleAgendaFileUpload(inputEl){
   }
   inputEl.value='';
 }
-function applyExtractedAgendaText(text, filename){
+/* Shows exactly what was read from the file, editable, before turning it
+   into discussion points — so a bad split is visible and fixable instead
+   of silently producing zero (or garbled) points. */
+function openExtractedTextReview(text, filename){
+  const preview = extractPointsFromText(text);
+  showModal(`
+    <div class="modal-head"><h3>Review Extracted Text — ${escapeHtml(filename)}</h3><button class="modal-close" onclick="closeModal()">&#10005;</button></div>
+    <div class="field-hint" style="margin-bottom:8px;">This is what was read from the file. Fix anything that looks wrong (each discussion item should be on its own line), then create points. Currently detected: <strong>${preview.length} point(s)</strong>.</div>
+    <textarea id="extractReviewTa" style="width:100%; min-height:260px; background:var(--panel-2); border:1px solid var(--border); color:var(--text); border-radius:8px; padding:10px;" oninput="updateExtractPreviewCount()">${escapeHtml(text)}</textarea>
+    <div class="field-hint mt8" id="extractPreviewCount">${preview.length} point(s) will be created.</div>
+    <div class="modal-foot">
+      <div></div>
+      <div style="display:flex; gap:8px;">
+        <button type="button" class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="commitExtractedAgendaPoints('${escapeHtml(filename).replace(/'/g,"\\'")}')">Create Discussion Points</button>
+      </div>
+    </div>
+  `);
+}
+function updateExtractPreviewCount(){
+  const ta = document.getElementById('extractReviewTa');
+  const el = document.getElementById('extractPreviewCount');
+  if(!ta || !el) return;
+  const points = extractPointsFromText(ta.value);
+  el.textContent = `${points.length} point(s) will be created.`;
+}
+function commitExtractedAgendaPoints(filename){
+  const ta = document.getElementById('extractReviewTa');
+  const text = ta ? ta.value : '';
   const points = extractPointsFromText(text);
-  if(!points.length){ toast(`Could not identify discussion points in "${filename}".`, true); return; }
+  if(!points.length){ toast('No discussion points found — try adding one item per line, or use "Add Point" manually.', true); return; }
   const mi = ensureMeetingIntel(MI_SELECTED_MEETING);
   const existing = new Set(mi.points.map(p=>p.text));
   let added=0;
   points.forEach(t=>{ if(!existing.has(t)){ mi.points.push({id:uid('pt'), text:t, status:'Pending'}); added++; } });
-  saveAll(); toast(`${added} point(s) extracted from "${filename}" (processed locally).`);
+  saveAll(); closeModal();
+  toast(`${added} point(s) created from "${filename}".` + (added<points.length? ` (${points.length-added} were already in your list.)`:''));
   renderTopbar(); renderSidebar(); renderPage();
 }
 async function extractAgendaWithLiveAI(){
@@ -2762,22 +2906,16 @@ async function extractAgendaWithLiveAI(){
   const isPdf = file.type==='application/pdf' || /\.pdf$/i.test(file.name);
   if(statusEl) statusEl.innerHTML = `<div class="small-muted mt8">&#8987; Sending to Live AI…</div>`;
   try{
-    const base64 = await readFileAsBase64(file);
     const prompt = 'This is a board/committee meeting agenda document. Extract every distinct agenda item or discussion point as a separate line, in plain text, one point per line, no numbering or bullet characters, no preamble or closing remarks — just the list of points.';
+    const base64 = await readFileAsBase64(file);
     const reply = await callClaudeAPIWithFile(base64, file.type, isPdf, prompt, 'You extract structured discussion points from meeting agenda documents for a corporate governance tracking app. Be concise and literal.');
-    const points = reply.split(/\n+/).map(l=>l.replace(/^[-•*\d.\)]+\s*/,'').trim()).filter(l=>l.length>4);
-    if(!points.length){ toast('Live AI could not identify discussion points in that file.', true); }
-    else{
-      const mi = ensureMeetingIntel(MI_SELECTED_MEETING);
-      const existing = new Set(mi.points.map(p=>p.text));
-      let added=0;
-      points.forEach(t=>{ if(!existing.has(t)){ mi.points.push({id:uid('pt'), text:t, status:'Pending'}); added++; } });
-      saveAll(); toast(`${added} point(s) extracted via Live AI.`);
-    }
+    if(statusEl) statusEl.innerHTML = '';
+    if(!reply || !reply.trim()){ toast('Live AI could not identify discussion points in that file.', true); }
+    else{ openExtractedTextReview(reply.trim(), file.name + ' (Live AI)'); }
   }catch(e){
+    if(statusEl) statusEl.innerHTML = '';
     toast('Live AI extraction failed: ' + String(e.message||e).slice(0,140), true);
   }
-  if(statusEl) statusEl.innerHTML = '';
   renderTopbar(); renderSidebar(); renderPage();
 }
 
@@ -3123,7 +3261,9 @@ function renderSettingsPage(){
         <div class="card-sub mt8">Records data: ${storage.totalMB.toFixed(2)} MB used (browsers typically allow ~5–10 MB for this kind of storage; varies by browser). Attachments are stored separately in this browser's file storage, which usually has far more headroom.</div>
         <div class="progress-track mt8"><div class="progress-fill" style="width:${storagePct}%; background:${storageColor};"></div></div>
         <div class="mt16" style="display:flex; flex-direction:column; gap:10px;">
+          <button class="btn btn-ghost" onclick="openManageAttachments()">&#128193; Manage Attachments (view / delete individually)</button>
           <button class="btn btn-ghost" onclick="cleanupOrphanedAttachments()">&#129529; Clean Up Unreferenced Attachments</button>
+          <button class="btn btn-danger" onclick="confirmClearAllAttachments()">&#128465; Clear ALL Attachments</button>
         </div>
         ${backups.length? `
           <div class="mt16">
